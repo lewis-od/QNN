@@ -66,5 +66,10 @@ print("Time to simulate: {}".format(dt))
 # Trace out the ancilla mode
 state_dm = state.reduced_dm(1)
 
+# Plot Wigner function of output state
 plot_wigner(Qobj(state_dm), colorbar=True)
 plt.show()
+
+# TODO: Use qutip.continuous_variables.covariance_matrix to calc cov mat of state
+# Also calc displacement vec, and plot wigner of corresponding Gaussian state for comparison
+# Calc fidelity between output and closest Gaussian state
