@@ -2,6 +2,10 @@ import numpy as np
 import tensorflow as tf
 import strawberryfields as sf
 from strawberryfields.ops import *
+from states import cubic_phase
+
+# Truncation to use in simulation
+trunc = 25
 
 # Parameters for the circuit
 b_splitters = tf.Variable(initial_value=tf.random_uniform([2, 2], maxval=2*np.pi),
@@ -34,25 +38,46 @@ with eng:
     MeasureFock(select=0) | q[0]
 
 # Run the circuit
-state = eng.run('tf', cutoff_dim=25, eval=False)
+state = eng.run('tf', cutoff_dim=trunc, eval=False)
 # Trace out the ancilla mode
 state_dm = state.reduced_dm(1)
 
-# TODO: Change this to something useful
-prob = state.fock_prob([1, 1])
-loss = -prob
+# Calculate density matrix of an approximate cubic phase state
+target_state = cubic_phase(trunc, 0.005, -1.0).full()
+target_dm = target_state @ target_state.conj().T
 
+# Calculate the fidelity of the output state with the cubic phase state
+fid = tf.trace(state_dm @ target_dm)
+loss = -tf.abs(fid)
+
+# Tell tensorflow what to optimise
 optimiser = tf.train.GradientDescentOptimizer(learning_rate=0.01)
 min_op = optimiser.minimize(loss)
 
+# Create the tensorflow session
 sess = tf.Session()
 sess.run(tf.global_variables_initializer())
 
+# Run 10 training steps
 for step in range(10):
     if step == 0:
         bs, r_vals, a_vals = sess.run([b_splitters, rs, alphas])
+        print("Initial parameters:")
+        print("Beam splitters:")
         print(bs)
+        print("Squeezing:")
         print(r_vals)
+        print("Displacements:")
         print(a_vals)
-    prob_val, _ = sess.run([prob, min_op])
-    print("{}: prob = {}".format(step, prob_val))
+    fid_val, _ = sess.run([fid, min_op])
+    print("{}: fidelity = {}".format(step, fid_val))
+
+# Print results
+bs, r_vals, a_vals = sess.run([b_splitters, rs, alphas])
+print("Final parameters:")
+print("Beam splitters:")
+print(bs)
+print("Squeezing:")
+print(r_vals)
+print("Displacements:")
+print(a_vals)
