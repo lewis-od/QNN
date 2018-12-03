@@ -10,6 +10,8 @@ trunc = 25
 n_layers = 2
 # Multiplier for trace penalty
 gamma = tf.placeholder(dtype=tf.float32, shape=[], name="gamma")
+# Learning rate
+learning_rate = tf.placeholder(dtype=tf.float32, shape=[], name="learning_rate")
 
 # Parameters for the circuit
 b_splitters = tf.Variable(initial_value=tf.random_uniform([n_layers, 2], maxval=2*np.pi),
@@ -66,7 +68,7 @@ penalty = tf.pow(norm - 1, 2) # Penalise unnormalised states
 loss = -fid - gamma*penalty
 
 # Tell tensorflow what to optimise
-optimiser = tf.train.GradientDescentOptimizer(learning_rate=0.01)
+optimiser = tf.train.GradientDescentOptimizer(learning_rate=learning_rate)
 min_op = optimiser.minimize(loss)
 
 # Create the tensorflow session
@@ -74,7 +76,8 @@ sess = tf.Session()
 sess.run(tf.global_variables_initializer())
 # Hyperparameter values
 feed_dict = {
-    gamma: 0.5
+    gamma: 0.5,
+    learning_rate: 0.05
 }
 # Run 15 training steps
 for step in range(15):
