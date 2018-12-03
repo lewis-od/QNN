@@ -9,10 +9,10 @@ trunc = 25
 # Number of layers in QNN
 n_layers = 2
 # Multiplier for trace penalty
-gamma = 0.5
+gamma = tf.placeholder(dtype=tf.float32, shape=[], name="gamma")
 
 # Parameters for the circuit
-b_splitters = tf.Variable(initial_value=tf.random_uniform([n_layers,2], maxval=2*np.pi),
+b_splitters = tf.Variable(initial_value=tf.random_uniform([n_layers, 2], maxval=2*np.pi),
     dtype=tf.float32, constraint=lambda x: tf.clip_by_value(x, 0, 2*np.pi))
 rs = tf.Variable(initial_value=tf.random_uniform([n_layers, 2], minval=-1.4, maxval=1.4),
     dtype=tf.float32, constraint=lambda x: tf.clip_by_value(x, -1.4, 1.4))
@@ -72,11 +72,15 @@ min_op = optimiser.minimize(loss)
 # Create the tensorflow session
 sess = tf.Session()
 sess.run(tf.global_variables_initializer())
-
-# Run 10 training steps
+# Hyperparameter values
+feed_dict = {
+    gamma: 0.5
+}
+# Run 15 training steps
 for step in range(15):
     if step == 0:
-        bs, r_vals, a_vals = sess.run([b_splitters, rs, alphas])
+        bs, r_vals, a_vals = sess.run([b_splitters, rs, alphas],
+            feed_dict=feed_dict)
         print("Initial parameters:")
         print("Beam splitters:")
         print(bs)
@@ -84,7 +88,7 @@ for step in range(15):
         print(r_vals)
         print("Displacements:")
         print(a_vals)
-    fid_val, pen_val, _ = sess.run([fid, penalty, min_op])
+    fid_val, pen_val, _ = sess.run([fid, penalty, min_op], feed_dict=feed_dict)
     print("{}: fidelity = {} | penalty = {}".format(step, fid_val, pen_val))
 
 # Print results
