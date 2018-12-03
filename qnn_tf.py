@@ -8,6 +8,8 @@ from states import cubic_phase
 trunc = 25
 # Number of layers in QNN
 n_layers = 2
+# Multiplier for trace penalty
+gamma = 0.5
 
 # Parameters for the circuit
 b_splitters = tf.Variable(initial_value=tf.random_uniform([n_layers,2], maxval=2*np.pi),
@@ -59,7 +61,9 @@ target_dm = target_state @ target_state.conj().T
 
 # Calculate the fidelity of the output state with the cubic phase state
 fid = tf.abs(tf.trace(state_dm @ target_dm)) # Output of tf.trace should be real, but usually has very small imaginary component
-loss = -fid
+norm = tf.abs(tf.trace(state_dm))
+penalty = tf.pow(norm - 1, 2) # Penalise unnormalised states
+loss = -fid - gamma*penalty
 
 # Tell tensorflow what to optimise
 optimiser = tf.train.GradientDescentOptimizer(learning_rate=0.01)
@@ -70,7 +74,7 @@ sess = tf.Session()
 sess.run(tf.global_variables_initializer())
 
 # Run 10 training steps
-for step in range(10):
+for step in range(15):
     if step == 0:
         bs, r_vals, a_vals = sess.run([b_splitters, rs, alphas])
         print("Initial parameters:")
@@ -80,8 +84,8 @@ for step in range(10):
         print(r_vals)
         print("Displacements:")
         print(a_vals)
-    fid_val, _ = sess.run([fid, min_op])
-    print("{}: fidelity = {}".format(step, fid_val))
+    fid_val, pen_val, _ = sess.run([fid, penalty, min_op])
+    print("{}: fidelity = {} | penalty = {}".format(step, fid_val, pen_val))
 
 # Print results
 bs, r_vals, a_vals = sess.run([b_splitters, rs, alphas])
