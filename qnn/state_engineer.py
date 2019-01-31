@@ -11,13 +11,16 @@ class StateEngineer(QNNBase):
         # The state to search for
         self.target_state = target_state
 
-        super(StateEngineer, self).__init__(sess, trunc=trunc, n_layers=n_layers, n_modes=2, learning_rate=learning_rate)
+        # Set up neural network
+        super(StateEngineer, self).__init__(sess, trunc=trunc,
+            n_layers=n_layers, n_modes=2, learning_rate=learning_rate)
 
-    # State engineering has a fixed input state to requires no encoding
+    # State engineering has a fixed input state (the vacuum), so requires no encoding
     def build_encoder(self):
         return
 
     def loss_fn(self):
+        """Calculate the fidelity of the output state with self.target_state"""
         # Calculate state by simulating circuit
         state = self.eng.run('tf', cutoff_dim=self.trunc, eval=False)
         state_dm = state.reduced_dm(1) # Trace out ancilla mode
@@ -25,7 +28,8 @@ class StateEngineer(QNNBase):
         target_dm = self.target_state @ self.target_state.conj().T
 
         # Calculate the fidelity of the output state with the cubic phase state
-        self.fid = tf.abs(tf.trace(state_dm @ target_dm)) # Output of tf.trace should be real, but usually has very small imaginary component
+        # Output of tf.trace should be real, but can have small imaginary part
+        self.fid = tf.abs(tf.trace(state_dm @ target_dm))
         norm = tf.abs(tf.trace(state_dm))
         penalty = tf.pow(norm - 1, 2) # Penalise unnormalised states
         loss = -self.fid - self.gamma*penalty
@@ -33,5 +37,6 @@ class StateEngineer(QNNBase):
         return loss
 
     def train(self, epochs):
+        """Train the neural network"""
         # Input/output variables not needed for state engineering
         return super(StateEngineer, self).train(epochs, [0], [0])
