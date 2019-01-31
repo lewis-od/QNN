@@ -5,18 +5,19 @@ from strawberryfields.ops import *
 
 class QNN(object):
     DEFUALT_HYPER = {
-        'learning_rate': 0.05,
+        'learning_rate': 0.1,
         'gamma': 0.5
     }
     def __init__(self, sess, target_state, trunc=25, n_layers=2, hyperparams=DEFUALT_HYPER):
         self.sess = sess
         self.hyperparams = hyperparams
+        self.global_step = tf.Variable(0, trainable=False)
         self.eng, self.q = sf.Engine(2)
 
         # Multiplier for trace penalty
         self.gamma = tf.placeholder(dtype=tf.float32, shape=[], name="gamma")
         # Learning rate
-        self.learning_rate = tf.placeholder(dtype=tf.float32, shape=[], name="learning_rate")
+        self.learning_rate = tf.train.exponential_decay(hyperparams['learning_rate'], self.global_step, 10, 0.9)
 
         self.b_splitters = tf.Variable(initial_value=tf.random_uniform([n_layers, 2], maxval=2*np.pi),
             dtype=tf.float32, constraint=lambda x: tf.clip_by_value(x, 0, 2*np.pi))
@@ -43,17 +44,19 @@ class QNN(object):
         loss = -self.fid - self.gamma*penalty
 
         optimiser = tf.train.GradientDescentOptimizer(learning_rate=self.learning_rate)
-        self.min_op = optimiser.minimize(loss)
+        self.min_op = optimiser.minimize(loss, global_step=self.global_step)
 
     def train(self, epochs):
         feed_dict = {
-            self.learning_rate: self.hyperparams['learning_rate'],
             self.gamma: self.hyperparams['gamma']
         }
         for step in range(epochs):
             fid_val, _ = self.sess.run([self.fid, self.min_op],
                 feed_dict=feed_dict)
             print("{}: fid = {}".format(step, fid_val))
+            if step % 10 == 0:
+                lr_val = self.sess.run([self.learning_rate])
+                print("Learning rate: {}".format(lr_val))
 
     def get_parameters(self):
         bs, r_vals, a_vals = self.sess.run([self.b_splitters, self.rs, self.alphas])
