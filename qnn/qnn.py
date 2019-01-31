@@ -27,11 +27,9 @@ class QNN(object):
             dtype=tf.float32)
 
         with self.eng:
-            Fock(1) | self.q[0]
-            Vac | self.q[1]
+            Vac | self.q[1] # Input state
             for n in range(n_layers):
                 self.__create_layer(n)
-            MeasureFock(select=0) | self.q[0]
 
         self.state = self.eng.run('tf', cutoff_dim=trunc, eval=False)
         state_dm = self.state.reduced_dm(1)
@@ -68,10 +66,13 @@ class QNN(object):
         :param q: The strawberryfields quantum register
         :param n: The layer number
         """
+        # Ancilla state
+        Fock(1) | self.q[0]
+
         # Interferometer
         BSgate(self.b_splitters[n][0], -np.pi/4) | (self.q[0], self.q[1])
 
-        # Squeezingi
+        # Squeezing
         Sgate(self.rs[n][0]) | self.q[0]
         Sgate(self.rs[n][1]) | self.q[1]
 
@@ -81,3 +82,6 @@ class QNN(object):
         # Displacement
         Dgate(self.alphas[n][0]) | self.q[0]
         Dgate(self.alphas[n][1]) | self.q[1]
+
+        # Measure ancilla mode
+        MeasureFock(select=0) | self.q[0]
