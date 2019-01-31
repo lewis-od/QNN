@@ -4,14 +4,17 @@ import numpy as np
 import matplotlib.pyplot as plt
 import sys
 
-if len(sys.argv) < 2:
-    print("Please specify the file to parse.")
+if len(sys.argv) < 3:
+    print("Please specify the file to parse and the number of epochs used.")
     sys.exit(1)
 
-fid_vals = np.zeros(200)
+# TODO: Parse this from file
+epochs = int(sys.argv[2])
+
+fid_vals = np.zeros(epochs)
 i = 0
 
-lr_vals = np.zeros(20)
+lr_vals = np.zeros(epochs//10)
 j = 0
 
 with open(sys.argv[1], 'r') as f:
@@ -25,7 +28,7 @@ with open(sys.argv[1], 'r') as f:
             if len(parts) > 1:
                 lr_vals[j] = np.float64(parts[-1][1:-2])
                 j += 1
-        if i == 200:
+        if i == epochs:
             break
 
 plt.subplot(1, 2, 1)
@@ -34,8 +37,8 @@ plt.xlabel("Epoch")
 plt.ylabel("Fidelity")
 
 plt.subplot(1, 2, 2)
-plt.plot(np.arange(0, 200, 10), lr_vals)
-plt.xticks(np.arange(0, 200, 10), rotation=45)
+plt.plot(np.arange(0, epochs, 10), lr_vals)
+plt.xticks(np.arange(0, epochs, 10), rotation=45)
 plt.xlabel("Epoch")
 plt.ylabel("Learning Rate")
 plt.show()
