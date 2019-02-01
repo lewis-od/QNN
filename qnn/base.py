@@ -27,7 +27,7 @@ class QNNBase(metaclass=abc.ABCMeta):
         # Input values
         self.x = tf.placeholder(tf.float64, shape=[None])
         # Expected output values
-        self.y_ = tf.placeholder(tf.float64, shape=[None])
+        self.y_ = tf.placeholder(tf.float32, shape=[None])
 
         self.__init_params()
         self.__build_circuit()
@@ -61,7 +61,7 @@ class QNNBase(metaclass=abc.ABCMeta):
             print("{} : Loss = {}".format(step, loss_val))
             if step % 10 == 0:
                 # Print the learning rate every 10 steps
-                lr_val = self.sess.run([self.learning_rate])
+                lr_val = self.sess.run(self.learning_rate)
                 print("Learning rate: {}".format(lr_val))
 
     def get_parameters(self):
@@ -99,7 +99,7 @@ class QNNBase(metaclass=abc.ABCMeta):
     def build_encoder(self):
         """
         Builds part of circuit that encodes classical info as a quantum state.
-        This is placed at the beggining of the circuit, and should encode the
+        This is placed at the beginning of the circuit, and should encode the
         value self.x as a quantum state.
         """
         pass
