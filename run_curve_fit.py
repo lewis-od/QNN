@@ -1,3 +1,4 @@
+import os
 import numpy as np
 import tensorflow as tf
 import strawberryfields as sf
@@ -65,10 +66,10 @@ sess = tf.Session()
 sess.run(tf.global_variables_initializer())
 
 input = np.linspace(-1, 1, batch_size)
-output = input ** 2 # Curve fit f(x) = x**2
+actual_output = input ** 2 # Curve fit f(x) = x**2
 
 for step in range(epochs):
-    loss_val, _ = sess.run([loss, min_op], feed_dict={ x: input, y_: output })
+    loss_val, _ = sess.run([loss, min_op], feed_dict={ x: input, y_: actual_output })
     print("{}: loss = {}".format(step, loss_val))
     if step % 5 == 0:
         lr_val = sess.run(learning_rate)
@@ -76,6 +77,21 @@ for step in range(epochs):
 
 if should_save:
     saver = tf.train.Saver()
-    fname = './save/{}/model.ckpt'.format(datetime.now())[-7]
-    saver.save(sess, fname)
-    print("Saved to " + fname)
+    dir_name = './save/' + datetime.now().strftime("%Y-%m-%d %H:%M:%S") + '/'
+    if not os.path.isdir(dir_name):
+        os.makedirs(dir_name)
+    saver.save(sess, dir_name + 'model.ckpt')
+    print("Saved to " + dir_name)
+
+# saver = tf.train.Saver()
+# saver.restore(sess, './save/2019-02-01 17:42:47/model.ckpt')
+#
+# import matplotlib.pyplot as plt
+#
+# predicted_output = sess.run(output, feed_dict={ x: input })
+# input_plot = np.linspace(-1, 1, 50)
+# output_plot = input_plot**2
+#
+# plt.plot(input_plot, output_plot)
+# plt.scatter(input, predicted_output, c='r', marker='x')
+# plt.show()
