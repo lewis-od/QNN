@@ -6,9 +6,11 @@ from datetime import datetime
 from strawberryfields.ops import *
 
 n_layers = 3
-batch_size = 25
-init_learning_rate = 0.005
+batch_size = 50
+init_learning_rate = 0.01
 epochs = 50
+truncation = 10
+gamma = 10
 should_save = True
 
 eng, q = sf.Engine(2)
@@ -52,10 +54,13 @@ with eng:
     for n in range(n_layers):
         build_layer(n)
 
-state = eng.run('tf', cutoff_dim=20, eval=False, batch_size=batch_size)
+state = eng.run('tf', cutoff_dim=truncation, eval=False, batch_size=batch_size)
 output = state.quad_expectation(1)[0] # Position quadrature on mode 1
 # Mean squared error
-loss = tf.reduce_mean(tf.squared_difference(output, y_))
+mse = tf.reduce_mean(tf.squared_difference(output, y_))
+penalty = (tf.real(state.trace()) - 1) ** 2
+penalty = gamma * tf.reduce_mean(penalty)
+loss = mse + penalty
 
 def batch_generator(arrays, b_size):
     """Groups data in the arrays list into batches of size b_size"""
@@ -82,8 +87,9 @@ n_batches = inputs.size // batch_size
 
 # Train using gradient descent
 global_step = tf.Variable(0, trainable=False)
-learning_rate = tf.train.exponential_decay(init_learning_rate, global_step, n_batches*10, 0.9)
-optimiser = tf.train.GradientDescentOptimizer(learning_rate=learning_rate)
+learning_rate = tf.train.exponential_decay(init_learning_rate,
+    global_step, n_batches*10, 0.9, staircase=True)
+optimiser = tf.train.AdamOptimizer(learning_rate=learning_rate)
 min_op = optimiser.minimize(loss, global_step=global_step)
 
 sess = tf.Session()
@@ -112,8 +118,6 @@ for step in range(epochs):
     print("{}: loss = {}".format(step, total_loss))
     lr_val = sess.run(learning_rate)
     learning_rates[step] = lr_val # Save learning rate for later
-    if step % 5 == 0: # Print the learning rate every 5 steps
-        print("Learning rate: {}".format(lr_val))
 
 if should_save:
     now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -125,11 +129,13 @@ if should_save:
     saver = tf.train.Saver()
     saver.save(sess, os.path.join(dir_name, 'model.ckpt'))
 
-    # Save hyperparms, losses, and training rates using numpy
+    # Save hyperparams, losses, and training rates using numpy
     hyperparams = {
         'layers': n_layers,
         'batch_size': batch_size,
-        'epochs': epochs
+        'epochs': epochs,
+        'truncation': truncation,
+        'gamma': gamma
     }
     output_file = os.path.join(dir_name, 'output.npz')
     if os.path.isfile(output_file):
@@ -137,6 +143,10 @@ if should_save:
         output_file = os.path.join(dir_name, 'output {}.npz'.format(now_str))
     np.savez(output_file, hyperparams=hyperparams,
         loss=losses, learning_rate=learning_rates)
+
+    # Save hyperparams to text file
+    with open(os.path.join(dir_name, 'hyperparams.txt'), 'w') as f:
+        print(hyperparams, file=f)
 
     print("Saved to " + dir_name)
 
@@ -148,6 +158,18 @@ predicted_output = sess.run(output, feed_dict={ x: sparse_in })
 input_plot = np.linspace(-2, 2, 100)
 output_plot = input_plot**2
 
+plt.subplot(1, 3, 1)
 plt.plot(input_plot, output_plot)
 plt.scatter(sparse_in, predicted_output, c='r', marker='x')
+
+plt.subplot(1, 3, 2)
+plt.plot(np.arange(epochs), losses)
+plt.xlabel('Epoch')
+plt.ylabel('Loss')
+
+plt.subplot(1, 3, 3)
+plt.plot(np.arange(epochs), learning_rates)
+plt.xlabel('Epoch')
+plt.ylabel('Learning Rate')
+
 plt.show()
