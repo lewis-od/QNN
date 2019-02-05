@@ -6,7 +6,7 @@ from datetime import datetime
 from strawberryfields.ops import *
 
 n_layers = 3
-batch_size = 20
+batch_size = 25
 init_learning_rate = 0.005
 epochs = 50
 should_save = True
@@ -57,32 +57,56 @@ output = state.quad_expectation(1)[0] # Position quadrature on mode 1
 # Mean squared error
 loss = tf.reduce_mean(tf.squared_difference(output, y_))
 
+def batch_generator(arrays, b_size):
+    """Groups data in the arrays list into batches of size b_size"""
+    starts = [0] * len(arrays)
+    while True:
+        batches = []
+        for i, array in enumerate(arrays):
+            start = starts[i]
+            stop = start + b_size
+            diff = stop - array.shape[0]
+            if diff <= 0:
+                batch = array[start:stop]
+                starts[i] += b_size
+            else:
+                batch = np.concatenate((array[start:], array[:diff]))
+                starts[i] = diff
+            batches.append(batch)
+        yield batches
+
+inputs = (np.random.rand(100) - 0.5) * 4 # Random values in [-2,2)
+actual_output = inputs ** 2 # Curve fit f(x) = x**2
+batched_data = batch_generator([inputs, actual_output], batch_size)
+n_batches = inputs.size // batch_size
+
 # Train using gradient descent
 global_step = tf.Variable(0, trainable=False)
-learning_rate = tf.train.exponential_decay(init_learning_rate, global_step, 5, 0.9)
+learning_rate = tf.train.exponential_decay(init_learning_rate, global_step, n_batches*10, 0.9)
 optimiser = tf.train.GradientDescentOptimizer(learning_rate=learning_rate)
 min_op = optimiser.minimize(loss, global_step=global_step)
 
 sess = tf.Session()
 sess.run(tf.global_variables_initializer())
 
-inputs = (np.random.rand(100) - 0.5) * 4 # Random values in [-2,2)
-actual_output = inputs ** 2 # Curve fit f(x) = x**2
-data = np.array([inputs, actual_output])
-
-n_batches = inputs.size // batch_size
+# Load session if command line argument given
+if len(os.sys.argv) == 2:
+    saver = tf.train.Saver()
+    saver.restore(sess, os.sys.argv[1])
+    print("Loaded saved model from " + os.sys.argv[1])
 
 for step in range(epochs):
-    # Choose random sample from all input data
-    idx = np.random.choice(data.shape[1], size=batch_size, replace=True)
-    batch_in = data[0, idx]
-    batch_out = data[1, idx]
-    # Run a training step
-    loss_val, _ = sess.run([loss, min_op], feed_dict={
-        x: batch_in,
-        y_: batch_out
-    })
-    print("{}: loss = {}".format(step, loss_val))
+    total_loss = 0.0 # Keep track of cumulative loss over all batches
+    for b in range(n_batches):
+        batch_in, batch_out = next(batched_data) # Get next batch
+        # Run a training step
+        loss_val, _ = sess.run([loss, min_op], feed_dict={
+            x: batch_in,
+            y_: batch_out
+        })
+        total_loss += loss_val
+    total_loss /= n_batches # Average loss over all input data
+    print("{}: loss = {}".format(step, total_loss))
     if step % 5 == 0: # Print the learning rate every 5 steps
         lr_val = sess.run(learning_rate)
         print("Learning rate: {}".format(lr_val))
@@ -96,15 +120,12 @@ if should_save:
     saver.save(sess, dir_name + 'model.ckpt')
     print("Saved to " + dir_name)
 
-# saver = tf.train.Saver()
-# saver.restore(sess, './save/2019-02-01 17:42:47/model.ckpt')
-
 import matplotlib.pyplot as plt
 
 sparse_in = np.linspace(-2, 2, batch_size)
 predicted_output = sess.run(output, feed_dict={ x: sparse_in })
 
-input_plot = np.linspace(-1, 1, 50)
+input_plot = np.linspace(-2, 2, 100)
 output_plot = input_plot**2
 
 plt.plot(input_plot, output_plot)
