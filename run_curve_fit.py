@@ -95,6 +95,8 @@ if len(os.sys.argv) == 2:
     saver.restore(sess, os.sys.argv[1])
     print("Loaded saved model from " + os.sys.argv[1])
 
+losses = np.zeros(epochs)
+learning_rates = np.zeros(int(np.ceil(epochs / 5)))
 for step in range(epochs):
     total_loss = 0.0 # Keep track of cumulative loss over all batches
     for b in range(n_batches):
@@ -106,18 +108,36 @@ for step in range(epochs):
         })
         total_loss += loss_val
     total_loss /= n_batches # Average loss over all input data
+    losses[step] = total_loss # Save loss for later
     print("{}: loss = {}".format(step, total_loss))
     if step % 5 == 0: # Print the learning rate every 5 steps
         lr_val = sess.run(learning_rate)
+        learning_rates[step//5] = lr_val # Save learning rate for later
         print("Learning rate: {}".format(lr_val))
 
 if should_save:
-    # Save the trained network
-    saver = tf.train.Saver()
-    dir_name = './save/' + datetime.now().strftime("%Y-%m-%d %H:%M:%S") + '/'
+    now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    dir_name = os.path.join('.', 'save', now_str)
     if not os.path.isdir(dir_name):
         os.makedirs(dir_name)
-    saver.save(sess, dir_name + 'model.ckpt')
+
+    # Save tensorflow model
+    saver = tf.train.Saver()
+    saver.save(sess, os.path.join(dir_name, 'model.ckpt'))
+
+    # Save hyperparms, losses, and training rates using numpy
+    hyperparams = {
+        'layers': n_layers,
+        'batch_size': batch_size,
+        'epochs': epochs
+    }
+    output_file = os.path.join(dir_name, 'output.npz')
+    if os.path.isfile(output_file):
+        # Check file doesn't already exist (it will do if we loaded in a model earlier)
+        output_file = os.path.join(dir_name, 'output {}.npz'.format(now_str))
+    np.savez(output_file, hyperparams=hyperparams,
+        loss=losses, learning_rate=learning_rates)
+
     print("Saved to " + dir_name)
 
 import matplotlib.pyplot as plt
