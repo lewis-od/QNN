@@ -96,7 +96,7 @@ if len(os.sys.argv) == 2:
     print("Loaded saved model from " + os.sys.argv[1])
 
 losses = np.zeros(epochs)
-learning_rates = np.zeros(int(np.ceil(epochs / 5)))
+learning_rates = np.zeros(epochs)
 for step in range(epochs):
     total_loss = 0.0 # Keep track of cumulative loss over all batches
     for b in range(n_batches):
@@ -110,9 +110,9 @@ for step in range(epochs):
     total_loss /= n_batches # Average loss over all input data
     losses[step] = total_loss # Save loss for later
     print("{}: loss = {}".format(step, total_loss))
+    lr_val = sess.run(learning_rate)
+    learning_rates[step] = lr_val # Save learning rate for later
     if step % 5 == 0: # Print the learning rate every 5 steps
-        lr_val = sess.run(learning_rate)
-        learning_rates[step//5] = lr_val # Save learning rate for later
         print("Learning rate: {}".format(lr_val))
 
 if should_save:
