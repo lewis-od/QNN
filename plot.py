@@ -33,9 +33,10 @@ with open(sys.argv[1], 'r') as f:
 
 # plt.subplot(1, 2, 1)
 plt.plot(fid_vals)
-plt.xticks(np.arange(0, epochs, 1), rotation=45)
+plt.xticks(np.arange(0, epochs, 5), rotation=45)
 plt.xlabel("Epoch")
-plt.ylabel("Fidelity")
+plt.ylabel("Loss")
+plt.show()
 
 # plt.subplot(1, 2, 2)
 # plt.plot(np.arange(0, epochs, 5), lr_vals)
