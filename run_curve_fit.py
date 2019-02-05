@@ -6,9 +6,9 @@ from datetime import datetime
 from strawberryfields.ops import *
 
 n_layers = 3
-batch_size = 5
+batch_size = 20
 init_learning_rate = 0.005
-epochs = 20
+epochs = 50
 should_save = True
 
 eng, q = sf.Engine(2)
@@ -47,7 +47,7 @@ def build_layer(n):
     MeasureFock(select=0) | q[0]
 
 with eng:
-    Dgate(x) | q[1]
+    Dgate(x) | q[1] # Encode data as displacement along real axis
 
     for n in range(n_layers):
         build_layer(n)
@@ -57,6 +57,7 @@ output = state.quad_expectation(1)[0] # Position quadrature on mode 1
 # Mean squared error
 loss = tf.reduce_mean(tf.squared_difference(output, y_))
 
+# Train using gradient descent
 global_step = tf.Variable(0, trainable=False)
 learning_rate = tf.train.exponential_decay(init_learning_rate, global_step, 5, 0.9)
 optimiser = tf.train.GradientDescentOptimizer(learning_rate=learning_rate)
@@ -65,17 +66,29 @@ min_op = optimiser.minimize(loss, global_step=global_step)
 sess = tf.Session()
 sess.run(tf.global_variables_initializer())
 
-input = np.linspace(-1, 1, batch_size)
-actual_output = input ** 2 # Curve fit f(x) = x**2
+inputs = (np.random.rand(100) - 0.5) * 4 # Random values in [-2,2)
+actual_output = inputs ** 2 # Curve fit f(x) = x**2
+data = np.array([inputs, actual_output])
+
+n_batches = inputs.size // batch_size
 
 for step in range(epochs):
-    loss_val, _ = sess.run([loss, min_op], feed_dict={ x: input, y_: actual_output })
+    # Choose random sample from all input data
+    idx = np.random.choice(data.shape[1], size=batch_size, replace=True)
+    batch_in = data[0, idx]
+    batch_out = data[1, idx]
+    # Run a training step
+    loss_val, _ = sess.run([loss, min_op], feed_dict={
+        x: batch_in,
+        y_: batch_out
+    })
     print("{}: loss = {}".format(step, loss_val))
-    if step % 5 == 0:
+    if step % 5 == 0: # Print the learning rate every 5 steps
         lr_val = sess.run(learning_rate)
         print("Learning rate: {}".format(lr_val))
 
 if should_save:
+    # Save the trained network
     saver = tf.train.Saver()
     dir_name = './save/' + datetime.now().strftime("%Y-%m-%d %H:%M:%S") + '/'
     if not os.path.isdir(dir_name):
@@ -85,13 +98,15 @@ if should_save:
 
 # saver = tf.train.Saver()
 # saver.restore(sess, './save/2019-02-01 17:42:47/model.ckpt')
-#
-# import matplotlib.pyplot as plt
-#
-# predicted_output = sess.run(output, feed_dict={ x: input })
-# input_plot = np.linspace(-1, 1, 50)
-# output_plot = input_plot**2
-#
-# plt.plot(input_plot, output_plot)
-# plt.scatter(input, predicted_output, c='r', marker='x')
-# plt.show()
+
+import matplotlib.pyplot as plt
+
+sparse_in = np.linspace(-2, 2, batch_size)
+predicted_output = sess.run(output, feed_dict={ x: sparse_in })
+
+input_plot = np.linspace(-1, 1, 50)
+output_plot = input_plot**2
+
+plt.plot(input_plot, output_plot)
+plt.scatter(sparse_in, predicted_output, c='r', marker='x')
+plt.show()
