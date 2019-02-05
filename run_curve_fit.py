@@ -5,9 +5,9 @@ import strawberryfields as sf
 from datetime import datetime
 from strawberryfields.ops import *
 
-n_layers = 3
+n_layers = 5
 batch_size = 50
-init_learning_rate = 0.01
+init_learning_rate = 0.1
 epochs = 50
 truncation = 10
 gamma = 10
@@ -21,7 +21,7 @@ b_splitters = tf.Variable(initial_value=tf.random_uniform([n_layers, 2], maxval=
 rs = tf.Variable(initial_value=tf.random_uniform([n_layers, 2], minval=-1.4, maxval=1.4),
     dtype=tf.float32, constraint=lambda x: tf.clip_by_value(x, -1.4, 1.4))
 # Displacement parameters - 2 per layer (1 on each mode)
-alphas = tf.Variable(initial_value=tf.random_normal([n_layers, 2], mean=1, stddev=4),
+alphas = tf.Variable(initial_value=tf.random_normal([n_layers, 2], mean=0.5, stddev=4),
     dtype=tf.float32)
 
 x = tf.placeholder(tf.float32, shape=[batch_size])
@@ -88,7 +88,7 @@ n_batches = inputs.size // batch_size
 # Train using gradient descent
 global_step = tf.Variable(0, trainable=False)
 learning_rate = tf.train.exponential_decay(init_learning_rate,
-    global_step, n_batches*10, 0.9, staircase=True)
+    global_step, n_batches*10, 0.9, staircase=False)
 optimiser = tf.train.AdamOptimizer(learning_rate=learning_rate)
 min_op = optimiser.minimize(loss, global_step=global_step)
 
