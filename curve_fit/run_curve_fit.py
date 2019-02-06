@@ -7,8 +7,8 @@ from strawberryfields.ops import *
 
 n_layers = 6
 batch_size = 50
-init_learning_rate = 0.1
-epochs = 100
+init_learning_rate = 0.2
+epochs = 150
 truncation = 10
 gamma = 10
 should_save = True
@@ -89,7 +89,7 @@ n_batches = inputs.size // batch_size
 # Train using gradient descent
 global_step = tf.Variable(0, trainable=False)
 learning_rate = tf.train.exponential_decay(init_learning_rate,
-    global_step, n_batches*10, 0.98, staircase=True)
+    global_step, n_batches*5, 0.90, staircase=True)
 optimiser = tf.train.AdamOptimizer(learning_rate=learning_rate)
 min_op = optimiser.minimize(loss, global_step=global_step)
 
