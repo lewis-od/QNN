@@ -1,19 +1,21 @@
 import tensorflow as tf
-import strawberryfields as sf
+import numpy as np
 from qnn.base import QNNBase
 
 class StateEngineer(QNNBase):
-    def __init__(self, sess, target_state, trunc=25, n_layers=2, gamma=0.5, learning_rate=0.05):
-        # Gamma is multiplier for trace penalty
-        self.gamma = tf.placeholder(dtype=tf.float32, shape=[], name="gamma")
-        self.hyperparams = { self.gamma: gamma }
+    DEFAULT_HYPER_SE = {
+        'gamma': 10
+    }
+    def __init__(self, sess, target_state, n_layers=3, hyperparams={}):
+        for key, val in self.DEFAULT_HYPER_SE.items():
+            if key not in hyperparams.keys(): hyperparams[key] = val
 
-        # The state to search for
+        self.batch_size = 1
         self.target_state = target_state
 
         # Set up neural network
-        super(StateEngineer, self).__init__(sess, trunc=trunc,
-            n_layers=n_layers, n_modes=2, learning_rate=learning_rate)
+        super(StateEngineer, self).__init__(sess, batch_size=1, n_modes=2,
+            n_layers=n_layers, hyperparams=hyperparams)
 
     # State engineering has a fixed input state (the vacuum), so requires no encoding
     def build_encoder(self):
@@ -22,7 +24,8 @@ class StateEngineer(QNNBase):
     def loss_fn(self):
         """Calculate the fidelity of the output state with self.target_state"""
         # Calculate state by simulating circuit
-        state = self.eng.run('tf', cutoff_dim=self.trunc, eval=False)
+        state = self.eng.run('tf', cutoff_dim=self.hyperparams['trunc'],
+            batch_size=None, eval=False)
         state_dm = state.reduced_dm(1) # Trace out ancilla mode
         # Convert target_state from vector -> density matrix
         target_dm = self.target_state @ self.target_state.conj().T
@@ -32,11 +35,12 @@ class StateEngineer(QNNBase):
         self.fid = tf.abs(tf.trace(state_dm @ target_dm))
         norm = tf.abs(tf.trace(state_dm))
         penalty = tf.pow(norm - 1, 2) # Penalise unnormalised states
-        loss = -self.fid - self.gamma*penalty
+        loss = -self.fid - self.hyperparams['gamma'] * penalty
 
         return loss
 
     def train(self, epochs):
         """Train the neural network"""
         # Input/output variables not needed for state engineering
-        return super(StateEngineer, self).train(epochs, [0], [0])
+        zero = np.array([0])
+        return super(StateEngineer, self).train(epochs, zero, zero)

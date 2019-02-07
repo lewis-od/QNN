@@ -4,11 +4,11 @@ from qnn.state_engineer import StateEngineer
 
 sess = tf.Session()
 
-target_state = cubic_phase(25, 0.005, -1.0).full()
+target_state = cubic_phase(10, 0.005, -1.0).full()
 net = StateEngineer(sess, target_state)
 
 sess.run(tf.global_variables_initializer())
-net.train(10)
+net.train(100)
 
 params = net.get_parameters()
 print(params)
