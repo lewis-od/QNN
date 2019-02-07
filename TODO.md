@@ -13,4 +13,4 @@
 - [x] Modify QNNBase to be compatible with batch training   
 - [x] Convert curve fitting to use QNNBase   
 - [x] Fix StateEngineer so it's compatible with batched version of QNNBase
-- [ ] Add save function to QNNBase
+- [x] Add save function to QNNBase

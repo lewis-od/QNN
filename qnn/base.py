@@ -1,6 +1,8 @@
 import abc
+import os
 import strawberryfields as sf
 import tensorflow as tf
+from datetime import datetime
 from strawberryfields.ops import *
 
 class QNNBase(metaclass=abc.ABCMeta):
@@ -91,6 +93,39 @@ class QNNBase(metaclass=abc.ABCMeta):
         """Returns the parameters of the neural network"""
         bs, r_vals, a_vals = self.sess.run([self.b_splitters, self.rs, self.alphas])
         return { 'beam_splitters': bs, 'squeezing': r_vals, 'displacement': a_vals }
+
+    def save(self, dir, prefix=""):
+        """
+        Save the tensorflow model and print params & hyperparams to text file.
+        Model will be saved in a directory named as the current date and time,
+        with the optional prefix prepended.
+
+        :param dir: Base directory to save the model to
+        :param prefix: Optional prefix for save folder name
+
+        :returns: The name of the folder the model was saved to
+        """
+        now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        f_name = prefix + now_str
+        save_folder = os.path.join(dir, f_name)
+        if not os.path.isdir(save_folder):
+            os.makedirs(save_folder)
+
+        saver = tf.train.Saver()
+        saver.save(self.sess, os.path.join(save_folder, "model.ckpt"))
+
+        n_epochs = self.sess.run(self.global_step)
+
+        with open(os.path.join(save_folder, 'hyperparams.txt'), 'w') as h_file:
+            print(self.hyperparams, file=h_file)
+            print('\n', file=h_file)
+            print("Total epochs: {}".format(n_epochs // self.batch_size),
+                file=h_file)
+            print('\n', file=h_file)
+            print(self.get_parameters(), file=h_file)
+
+        return save_folder
+
 
     @abc.abstractmethod
     def loss_fn(self):
