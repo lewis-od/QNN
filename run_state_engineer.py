@@ -20,5 +20,5 @@ with open(os.path.join(save_folder, 'hyperparams.txt'), 'a') as h_file:
     print('\n', file=h_file)
     print("Fidelity: {}".format(fid_val), file=h_file)
 np.savez(os.path.join(save_folder, 'output.npz'),
-    losses=losses, learning_rate=lrs)
+    losses=losses, learning_rate=lrs, hyperparams=net.hyperparams)
 print("Saved to " + save_folder)

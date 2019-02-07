@@ -154,7 +154,7 @@ if should_save:
     with open(os.path.join(dir_name, 'hyperparams.txt'), 'w') as h_file:
         print(hyperparams, file=h_file)
 
-    print("Saved to " + dir_name)
+    print("Saved to: " + dir_name)
 
 import matplotlib.pyplot as plt
 

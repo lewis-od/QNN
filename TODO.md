@@ -14,3 +14,4 @@
 - [x] Convert curve fitting to use QNNBase   
 - [x] Fix StateEngineer so it's compatible with batched version of QNNBase
 - [x] Add save function to QNNBase
+- [ ] Implement CurveFitX using Kerr gate
