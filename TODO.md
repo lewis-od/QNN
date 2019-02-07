@@ -8,6 +8,8 @@
   - [ ] AMSGrad (adjusts learning rate based on "long-term memory" of past grads)  
 - [x] Add noise to training data for curve fitting  
 - [x] Implement architecture from Xanadu paper for comparison  
+- [ ] Generate random set of initial params and load them at startup
 
-- [ ] Modify QNNBase to be compatible with batch training   
-- [ ] Convert curve fitting to use QNNBase   
+- [x] Modify QNNBase to be compatible with batch training   
+- [x] Convert curve fitting to use QNNBase   
+- [ ] Fix StateEngineer so it's compatible with batched version of QNNBase
