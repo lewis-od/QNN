@@ -31,21 +31,27 @@ class CurveFitter(QNNBase):
         loss = mse + penalty
         return loss
 
-    def make_prediction(self, input):
-        """Runs the circuit with given input values"""
-        if input.size > self.batch_size:
-            # TODO: Allow input of any size
-            raise NotImplementedError("Input size must be <= batch size (for now)")
+    def make_prediction(self, inputs):
+        """
+        Runs the neural network with given input values
 
-        # Pad inputs with zeros
-        inputs = np.zeros(self.batch_size)
-        inputs[:input.size] = input
-
-        # Evaluate outputs
-        states = self.eng.run('tf', trunc=self.hyperparams['trunc'],
-            batch_size=self.batch_size, eval=False)
-        outputs = states.quad_expectation(1)[0]
-        outputs = self.sess.run(outputs, feed_dict={ self.x: inputs })
-        outputs = outputs[:input.size]
+        :param inputs: A 1D numpy array of input values
+        """
+        outputs = np.zeros(inputs.size) # Array to hold output vals
+        # Input to network must be of length self.batch_size
+        # If inputs.size > self.batch_size, we will have to call the network
+        # multiple times.
+        evaluations = int(np.ceil(inputs.size / self.batch_size))
+        # Array to hold input values for each evaluation
+        batch_in = np.zeros(self.batch_size)
+        for n in range(evaluations):
+            start = n * self.batch_size
+            end = np.min([inputs.size, (n+1)*self.batch_size])
+            batch_in[:(end-start)] = inputs[start:end]
+            states = self.eng.run('tf', cutoff_dim=self.hyperparams['trunc'],
+                batch_size=self.batch_size, eval=False)
+            preds = states.quad_expectation(1)[0]
+            preds = self.sess.run(preds, feed_dict={ self.x: batch_in })
+            outputs[start:end] = preds[:(end-start)]
 
         return outputs
