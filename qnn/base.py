@@ -11,16 +11,18 @@ class QNNBase(metaclass=abc.ABCMeta):
         'lr_decay_steps': 5,
         'lr_decay_rate': 0.90,
         'lr_staircase': True,
-        'trunc': 10,
+        'cutoff': 10,
     }
     def __init__(self, sess, batch_size, n_modes=2, n_layers=6, hyperparams={}):
         """
         Setup the neural network
         :param sess: A Tensorflow session
-        :param trunc: The truncation to use in simulation of the quantum circuit
-        :param n_layers: How many layers the neural network has
-        :param n_modes: How many modes to use
-        :param learning_rate: The initial learning rate (decays exponentially during training)
+        :param batch_size: The batch size to use in training
+        :param n_modes: Number of modes to use in the neural network
+            NOTE: If n_modes != 2, then self.__build_layer will need to
+            be overridden
+        :param n_layers: Number of layers to use
+        :param hyperparams: A dict of hyperparams
         """
         self.sess = sess
         self.n_layers = n_layers

@@ -24,7 +24,7 @@ class StateEngineer(QNNBase):
     def loss_fn(self):
         """Calculate the fidelity of the output state with self.target_state"""
         # Calculate state by simulating circuit
-        state = self.eng.run('tf', cutoff_dim=self.hyperparams['trunc'],
+        state = self.eng.run('tf', cutoff_dim=self.hyperparams['cutoff'],
             batch_size=None, eval=False)
         state_dm = state.reduced_dm(1) # Trace out ancilla mode
         # Convert target_state from vector -> density matrix

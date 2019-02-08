@@ -20,7 +20,7 @@ class CurveFitter(QNNBase):
         Dgate(self.x) | self.q[1]
 
     def loss_fn(self):
-        state = self.eng.run('tf', cutoff_dim=self.hyperparams['trunc'],
+        state = self.eng.run('tf', cutoff_dim=self.hyperparams['cutoff'],
             batch_size=self.batch_size, eval=False)
         exp_val = state.quad_expectation(1)[0]
         # Mean squared error
@@ -48,7 +48,7 @@ class CurveFitter(QNNBase):
             start = n * self.batch_size
             end = np.min([inputs.size, (n+1)*self.batch_size])
             batch_in[:(end-start)] = inputs[start:end]
-            states = self.eng.run('tf', cutoff_dim=self.hyperparams['trunc'],
+            states = self.eng.run('tf', cutoff_dim=self.hyperparams['cutoff'],
                 batch_size=self.batch_size, eval=False)
             preds = states.quad_expectation(1)[0]
             preds = self.sess.run(preds, feed_dict={ self.x: batch_in })
