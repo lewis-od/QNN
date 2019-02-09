@@ -17,12 +17,12 @@ class CurveFitter(QNNBase):
 
     def build_encoder(self):
         # Encode data by displacing along real axis
-        Dgate(self.x) | self.q[1]
+        Dgate(self.x) | self.q[0]
 
     def loss_fn(self):
         state = self.eng.run('tf', cutoff_dim=self.hyperparams['cutoff'],
             batch_size=self.batch_size, eval=False)
-        exp_val = state.quad_expectation(1)[0]
+        exp_val = state.quad_expectation(0)[0]
         # Mean squared error
         mse = tf.reduce_mean(tf.squared_difference(exp_val, self.y_))
         # Trace penalty

@@ -170,7 +170,7 @@ class QNNBase(metaclass=abc.ABCMeta):
         :param n: Index denoting which layer of the neural network is being built
         """
         # Ancilla state
-        Fock(1) | self.q[0]
+        Fock(1) | self.q[1]
 
         # Interferometer
         BSgate(self.b_splitters[n][0], -np.pi/4) | (self.q[0], self.q[1])
@@ -187,7 +187,7 @@ class QNNBase(metaclass=abc.ABCMeta):
         Dgate(self.alphas[n][1]) | self.q[1]
 
         # Measure ancilla mode
-        MeasureFock(select=0) | self.q[0]
+        MeasureFock(select=0) | self.q[1]
 
     def __batch_generator(self, arrays):
         """Groups data in the arrays list into batches of size self.batch_size"""

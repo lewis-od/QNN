@@ -1,6 +1,7 @@
 import tensorflow as tf
 import numpy as np
 from qnn.base import QNNBase
+from strawberryfields.ops import Vac
 
 class StateEngineer(QNNBase):
     DEFAULT_HYPER_SE = {
@@ -17,16 +18,16 @@ class StateEngineer(QNNBase):
         super(StateEngineer, self).__init__(sess, batch_size=1, n_modes=2,
             n_layers=n_layers, hyperparams=hyperparams)
 
-    # State engineering has a fixed input state (the vacuum), so requires no encoding
+    # State engineering has a fixed input state (the vacuum)
     def build_encoder(self):
-        return
+        Vac | self.q[0]
 
     def loss_fn(self):
         """Calculate the fidelity of the output state with self.target_state"""
         # Calculate state by simulating circuit
         state = self.eng.run('tf', cutoff_dim=self.hyperparams['cutoff'],
             batch_size=None, eval=False)
-        state_dm = state.reduced_dm(1) # Trace out ancilla mode
+        state_dm = state.reduced_dm(0) # Trace out ancilla mode
         # Convert target_state from vector -> density matrix
         target_dm = self.target_state @ self.target_state.conj().T
 
