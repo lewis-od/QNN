@@ -8,11 +8,11 @@ class CurveFitter(QNNBase):
     DEFAULT_HYPER_CF = {
         'gamma': 10
     }
-    def __init__(self, sess, batch_size, n_modes=2, n_layers=6, hyperparams={}):
+    def __init__(self, sess, batch_size, n_layers=6, hyperparams={}):
         for key, val in self.DEFAULT_HYPER_CF.items():
             if key not in hyperparams: hyperparams[key] = val
         super(CurveFitter, self).__init__(
-            sess, batch_size, n_modes, n_layers, hyperparams
+            sess, batch_size, 2, n_layers, hyperparams
         )
 
     def build_encoder(self):
