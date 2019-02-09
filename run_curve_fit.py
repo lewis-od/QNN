@@ -4,8 +4,11 @@ import tensorflow as tf
 from qnn.curve_fitter import CurveFitter
 
 n_epochs = 50
-
-f = np.load('curve_fit/training/sinc.npz')
+training_file = 'curve_fit/training/sin.npz'
+if len(os.sys.argv) == 2:
+    training_file = os.sys.argv[1]
+print("Loading training data from: " +  training_file)
+f = np.load(training_file)
 inputs = f['x']
 expected_outputs = f['noisy']
 
