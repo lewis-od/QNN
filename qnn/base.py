@@ -37,7 +37,7 @@ class QNNBase(metaclass=abc.ABCMeta):
         self.learning_rate = tf.train.exponential_decay(
             self.hyperparams['lr_initial'],
             self.global_step,
-            self.hyperparams['lr_decay_steps']*self.batch_size, # Each batch is 1 step
+            self.hyperparams['lr_decay_steps'],
             self.hyperparams['lr_decay_rate'],
             staircase=self.hyperparams['lr_staircase']
         )

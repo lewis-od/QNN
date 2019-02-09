@@ -1,18 +1,19 @@
 import os
 import numpy as np
 import tensorflow as tf
-import matplotlib.pyplot as plt
 from qnn.curve_fitter import CurveFitter
 
 n_epochs = 50
 
-sess = tf.Session()
-net = CurveFitter(sess, batch_size=50)
-sess.run(tf.global_variables_initializer())
-
 f = np.load('curve_fit/training/sinc.npz')
 inputs = f['x']
 expected_outputs = f['noisy']
+
+sess = tf.Session()
+net = CurveFitter(sess, batch_size=50, hyperparams={
+    'lr_decay_steps': (inputs.size // 50) * 5
+})
+sess.run(tf.global_variables_initializer())
 
 losses, lrs = net.train(n_epochs, inputs, expected_outputs)
 
@@ -23,6 +24,8 @@ save_dir = net.save("save", prefix="CF ")
 np.savez(os.path.join(save_dir, 'output.npz'), hyperparams=net.hyperparams,
     loss=losses, learning_rate=lrs)
 print("Saved to: " + save_dir)
+
+import matplotlib.pyplot as plt
 
 plt.subplot(1, 3, 1)
 plt.plot(inputs, true_outputs)
