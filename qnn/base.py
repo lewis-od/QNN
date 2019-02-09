@@ -19,7 +19,7 @@ class QNNBase(metaclass=abc.ABCMeta):
         :param sess: A Tensorflow session
         :param batch_size: The batch size to use in training
         :param n_modes: Number of modes to use in the neural network
-            NOTE: If n_modes != 2, then self.__build_layer will need to
+            NOTE: If n_modes != 2, then self._build_layer will need to
             be overridden
         :param n_layers: Number of layers to use
         :param hyperparams: A dict of hyperparams
@@ -49,8 +49,8 @@ class QNNBase(metaclass=abc.ABCMeta):
         # Expected output values
         self.y_ = tf.placeholder(tf.float32, shape=[self.batch_size])
 
-        self.__init_params()
-        self.__build_circuit()
+        self._init_params()
+        self._build_circuit()
 
         # Use Adam optimiser
         optimiser = tf.train.AdamOptimizer(learning_rate=self.learning_rate)
@@ -134,7 +134,7 @@ class QNNBase(metaclass=abc.ABCMeta):
         """Returns loss value calculated using self.eng self.y_"""
         return NotImplementedError("QNNBase.loss_fn should be overridden by subclass")
 
-    def __init_params(self):
+    def _init_params(self):
         """Initialises all network parameters"""
         # Beam splitters - 2 per layer
         self.b_splitters = tf.Variable(initial_value=tf.random_uniform([self.n_layers, 2], maxval=2*np.pi),
@@ -146,14 +146,14 @@ class QNNBase(metaclass=abc.ABCMeta):
         self.alphas = tf.Variable(initial_value=tf.random_normal([self.n_layers, 2], mean=0, stddev=4),
             dtype=tf.float32)
 
-    def __build_circuit(self):
+    def _build_circuit(self):
         """Builds the quantum circuit that implements the neural network"""
         with self.eng:
             # Encode classical info as quantum state
             self.build_encoder()
             # Run it through the network
             for n in range(self.n_layers):
-                self.__build_layer(n)
+                self._build_layer(n)
 
     @abc.abstractmethod
     def build_encoder(self):
@@ -164,7 +164,7 @@ class QNNBase(metaclass=abc.ABCMeta):
         """
         raise NotImplementedError("QNNBase.build_encoder should be overridden by subclass.")
 
-    def __build_layer(self, n):
+    def _build_layer(self, n):
         """
         Builds 1 layer of the neural network
         :param n: Index denoting which layer of the neural network is being built
