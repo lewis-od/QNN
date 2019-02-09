@@ -10,8 +10,4 @@
 - [x] Implement architecture from Xanadu paper for comparison  
 - [ ] Generate random set of initial params and load them at startup
 
-- [x] Modify QNNBase to be compatible with batch training   
-- [x] Convert curve fitting to use QNNBase   
-- [x] Fix StateEngineer so it's compatible with batched version of QNNBase
-- [x] Add save function to QNNBase
-- [ ] Implement CurveFitX using Kerr gate
+- [ ] Add logging for use with Tensorboard
