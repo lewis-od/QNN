@@ -50,7 +50,7 @@ class CurveFitter(QNNBase):
             batch_in[:(end-start)] = inputs[start:end]
             states = self.eng.run('tf', cutoff_dim=self.hyperparams['cutoff'],
                 batch_size=self.batch_size, eval=False)
-            preds = states.quad_expectation(1)[0]
+            preds = states.quad_expectation(0)[0]
             preds = self.sess.run(preds, feed_dict={ self.x: batch_in })
             outputs[start:end] = preds[:(end-start)]
 
