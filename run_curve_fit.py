@@ -4,17 +4,20 @@ import tensorflow as tf
 from qnn.curve_fitter import CurveFitter
 
 n_epochs = 50
+batch_size = 50
+
 training_file = 'curve_fit/training/sin.npz'
 if len(os.sys.argv) == 2:
     training_file = os.sys.argv[1]
 print("Loading training data from: " +  training_file)
+
 f = np.load(training_file)
 inputs = f['x']
 expected_outputs = f['noisy']
 
 sess = tf.Session()
-net = CurveFitter(sess, batch_size=50, hyperparams={
-    'lr_decay_steps': (inputs.size // 50) * 5
+net = CurveFitter(sess, batch_size=batch_size, hyperparams={
+    'lr_decay_steps': (inputs.size // batch_size) * 5
 })
 sess.run(tf.global_variables_initializer())
 
