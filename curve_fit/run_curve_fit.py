@@ -7,8 +7,8 @@ from strawberryfields.ops import *
 
 n_layers = 6
 batch_size = 50
-init_learning_rate = 0.2
-epochs = 150
+# init_learning_rate = 0.1
+epochs = 500
 truncation = 10
 gamma = 10
 should_save = True
@@ -29,7 +29,7 @@ y_ = tf.placeholder(tf.float32, shape=[batch_size])
 
 def build_layer(n):
     # Ancilla state
-    Fock(1) | q[0]
+    Vac | q[0]
 
     # Interferometer
     BSgate(b_splitters[n][0], -np.pi/4) | (q[0], q[1])
@@ -46,7 +46,7 @@ def build_layer(n):
     Dgate(alphas[n][1]) | q[1]
 
     # Measure ancilla mode
-    MeasureFock(select=0) | q[0]
+    MeasureFock(select=2) | q[0]
 
 with eng:
     Dgate(x) | q[1] # Encode data as displacement along real axis
@@ -88,9 +88,9 @@ n_batches = inputs.size // batch_size
 
 # Train using gradient descent
 global_step = tf.Variable(0, trainable=False)
-learning_rate = tf.train.exponential_decay(init_learning_rate,
-    global_step, n_batches*5, 0.90, staircase=True)
-optimiser = tf.train.AdamOptimizer(learning_rate=learning_rate)
+# learning_rate = tf.train.exponential_decay(init_learning_rate,
+#     global_step, n_batches*5, 0.90, staircase=True)
+optimiser = tf.train.AdadeltaOptimizer(learning_rate=1.0, rho=0.95)
 min_op = optimiser.minimize(loss, global_step=global_step)
 
 sess = tf.Session()
@@ -103,7 +103,7 @@ if len(os.sys.argv) == 2:
     print("Loaded saved model from " + os.sys.argv[1])
 
 losses = np.zeros(epochs)
-learning_rates = np.zeros(epochs)
+# learning_rates = np.zeros(epochs)
 for step in range(epochs):
     total_loss = 0.0 # Keep track of cumulative loss over all batches
     for b in range(n_batches):
@@ -122,8 +122,8 @@ for step in range(epochs):
     if np.isnan(total_loss): # Quit if loss diverges
         os.sys.exit(1)
     losses[step] = total_loss # Save loss for later
-    lr_val = sess.run(learning_rate)
-    learning_rates[step] = lr_val # Save learning rate for later
+    # lr_val = sess.run(learning_rate)
+    # learning_rates[step] = lr_val # Save learning rate for later
 
 if should_save:
     now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -132,7 +132,7 @@ if should_save:
         os.makedirs(dir_name)
 
     # Save tensorflow model
-    saver = tf.train.Saver()
+    saver = tf.train.Saver(var_list=[b_splitters, rs, alphas])
     saver.save(sess, os.path.join(dir_name, 'model.ckpt'))
 
     # Save hyperparams, losses, and training rates using numpy
@@ -148,11 +148,12 @@ if should_save:
         # Check file doesn't already exist (it will do if we loaded in a model earlier)
         output_file = os.path.join(dir_name, 'output {}.npz'.format(now_str))
     np.savez(output_file, hyperparams=hyperparams,
-        loss=losses, learning_rate=learning_rates)
+        loss=losses)#, learning_rate=learning_rates)
 
     # Save hyperparams to text file
     with open(os.path.join(dir_name, 'hyperparams.txt'), 'w') as h_file:
         print(hyperparams, file=h_file)
+        print("Optimiser: " + optimiser.get_name(), file=h_file)
 
     print("Saved to: " + dir_name)
 
@@ -161,19 +162,19 @@ import matplotlib.pyplot as plt
 sparse_in = np.linspace(-2, 2, batch_size)
 predicted_output = sess.run(output, feed_dict={ x: sparse_in })
 
-plt.subplot(1, 3, 1)
+plt.subplot(1, 2, 1)
 plt.plot(inputs, f['true'], c='g')
 plt.scatter(sparse_in, predicted_output, c='r', marker='x')
 plt.scatter(inputs, actual_output, c='b', marker='o')
 
-plt.subplot(1, 3, 2)
+plt.subplot(1, 2, 2)
 plt.plot(np.arange(epochs), losses)
 plt.xlabel('Epoch')
 plt.ylabel('Loss')
 
-plt.subplot(1, 3, 3)
-plt.plot(np.arange(epochs), learning_rates)
-plt.xlabel('Epoch')
-plt.ylabel('Learning Rate')
+# plt.subplot(1, 3, 3)
+# plt.plot(np.arange(epochs), learning_rates)
+# plt.xlabel('Epoch')
+# plt.ylabel('Learning Rate')
 
 plt.show()
