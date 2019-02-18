@@ -1,4 +1,5 @@
 import os
+import ast
 import numpy as np
 import tensorflow as tf
 import strawberryfields as sf
@@ -7,8 +8,7 @@ from strawberryfields.ops import *
 
 n_layers = 6
 batch_size = 50
-# init_learning_rate = 0.1
-epochs = 100
+epochs = 500
 truncation = 10
 gamma = 10
 should_save = True
@@ -27,9 +27,25 @@ alphas = tf.Variable(initial_value=tf.random_normal([n_layers, 2], mean=0, stdde
 sess = tf.Session()
 # Load in network parameters that were saved by generate_params.py
 if len(os.sys.argv) == 2:
+    ckpt_file = os.sys.argv[1]
     saver = tf.train.Saver()
-    saver.restore(sess, os.sys.argv[1])
-    print("Loaded saved model from " + os.sys.argv[1])
+    saver.restore(sess, ckpt_file)
+
+    hyper_file = os.path.join(os.path.split(ckpt_file)[0], "hyperparams.txt")
+    with open(hyper_file, 'r') as f:
+        param_str = f.readline()
+    loaded_params = ast.literal_eval(param_str)
+    for param_name, val in loaded_params.items():
+        try:
+            actual_val = eval(param_name)
+        except Exception:
+            print("Error parsing hyperparams.txt")
+            os.sys.exit(1)
+        if actual_val != val:
+            print("Error: Loaded parameters not compatible with current settings")
+            print("Expected {} to be {} but got {}".format(param_name, actual_val, val))
+            os.sys.exit(1)
+    print("Loaded saved model from " + ckpt_file)
 else:
     sess.run(tf.global_variables_initializer())
 
@@ -97,8 +113,9 @@ n_batches = inputs.size // batch_size
 
 # Train using gradient descent
 global_step = tf.Variable(0, trainable=False)
-# learning_rate = tf.train.exponential_decay(init_learning_rate,
-#     global_step, n_batches*5, 0.90, staircase=True)
+# In original paper for AdaDelta, no learning rate parameter is required.
+# Setting learning_rate = 1.0 in the tensorflow implementation of the algorithm
+# mimics this.
 optimiser = tf.train.AdadeltaOptimizer(learning_rate=1.0, rho=0.95)
 min_op = optimiser.minimize(loss, global_step=global_step)
 
@@ -108,7 +125,6 @@ init_op = tf.variables_initializer(optimiser.variables() + [global_step])
 sess.run(init_op)
 
 losses = np.zeros(epochs)
-# learning_rates = np.zeros(epochs)
 for step in range(epochs):
     total_loss = 0.0 # Keep track of cumulative loss over all batches
     for b in range(n_batches):
@@ -127,8 +143,6 @@ for step in range(epochs):
     if np.isnan(total_loss): # Quit if loss diverges
         os.sys.exit(1)
     losses[step] = total_loss # Save loss for later
-    # lr_val = sess.run(learning_rate)
-    # learning_rates[step] = lr_val # Save learning rate for later
 
 if should_save:
     now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -176,10 +190,5 @@ plt.subplot(1, 2, 2)
 plt.plot(np.arange(epochs), losses)
 plt.xlabel('Epoch')
 plt.ylabel('Loss')
-
-# plt.subplot(1, 3, 3)
-# plt.plot(np.arange(epochs), learning_rates)
-# plt.xlabel('Epoch')
-# plt.ylabel('Learning Rate')
 
 plt.show()

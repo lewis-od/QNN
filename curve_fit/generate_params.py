@@ -118,8 +118,9 @@ if should_save:
 
     # Save hyperparams, losses, and training rates using numpy
     hyperparams = {
-        'layers': n_layers,
+        'n_layers': n_layers,
         'truncation': truncation,
+        'batch_size': batch_size
     }
     # Save hyperparams to text file
     with open(os.path.join(dir_name, 'hyperparams.txt'), 'w') as h_file:
