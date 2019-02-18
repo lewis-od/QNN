@@ -6,15 +6,16 @@ import strawberryfields as sf
 from datetime import datetime
 from strawberryfields.ops import *
 
-n_layers = 6
-batch_size = 50
-epochs = 500
-truncation = 10
-gamma = 10
-should_save = True
+n_layers = 6 # Number of layers in neural network
+batch_size = 50 # Batch size used in training
+epochs = 500 # Number of epochs to use
+truncation = 10 # Cutoff dimension for strawberry fields
+gamma = 10 # Multiplier for trace penalty
+should_save = True # Whether or not to save the results
 
-eng, q = sf.Engine(2)
+eng, q = sf.Engine(2) # Intitialise strawberry fields with a 2 mode system
 
+# Beam splitter parameters - 2 per layer (2 interferometers)
 b_splitters = tf.Variable(initial_value=tf.random_uniform([n_layers, 2], maxval=2*np.pi),
     dtype=tf.float32, constraint=lambda x: tf.clip_by_value(x, 0, 2*np.pi), name='b_splitters')
 # Squeezing parameters - 2 per layer (1 on each mode)
@@ -28,16 +29,19 @@ sess = tf.Session()
 # Load in network parameters that were saved by generate_params.py
 if len(os.sys.argv) == 2:
     ckpt_file = os.sys.argv[1]
+    # Load in saved parameters
     saver = tf.train.Saver()
     saver.restore(sess, ckpt_file)
 
+    # File containing hyperparameter values (n_layers, batch_size, etc)
+    # If these are different from the ones set above, we will get errors
     hyper_file = os.path.join(os.path.split(ckpt_file)[0], "hyperparams.txt")
     with open(hyper_file, 'r') as f:
-        param_str = f.readline()
-    loaded_params = ast.literal_eval(param_str)
+        param_str = f.readline() # Hyperparams dict on first line of file
+    loaded_params = ast.literal_eval(param_str) # Convert string -> dict
     for param_name, val in loaded_params.items():
         try:
-            actual_val = eval(param_name)
+            actual_val = eval(param_name) # Value of hyperparam set in this file
         except Exception:
             print("Error parsing hyperparams.txt")
             os.sys.exit(1)
@@ -46,13 +50,17 @@ if len(os.sys.argv) == 2:
             print("Expected {} to be {} but got {}".format(param_name, actual_val, val))
             os.sys.exit(1)
     print("Loaded saved model from " + ckpt_file)
-else:
+else: # No file provided, generate parameters randomly
     sess.run(tf.global_variables_initializer())
 
-x = tf.placeholder(tf.float32, shape=[batch_size])
-y_ = tf.placeholder(tf.float32, shape=[batch_size])
+x = tf.placeholder(tf.float32, shape=[batch_size]) # Input to neural network
+y_ = tf.placeholder(tf.float32, shape=[batch_size]) # Expected output (used to calculate loss)
 
 def build_layer(n):
+    """
+    Build one layer of the neural network
+    :param n: Integer indicating which layer we are building
+    """
     # Ancilla state
     Vac | q[0]
 
@@ -73,8 +81,9 @@ def build_layer(n):
     # Measure ancilla mode
     MeasureFock(select=2) | q[0]
 
+# Build the neural network
 with eng:
-    Dgate(x) | q[1] # Encode data as displacement along real axis
+    Dgate(x) | q[1] # Encode input data as displacement along real axis
 
     for n in range(n_layers):
         build_layer(n)
@@ -83,6 +92,7 @@ state = eng.run('tf', cutoff_dim=truncation, eval=False, batch_size=batch_size)
 output = state.quad_expectation(1)[0] # Position quadrature on mode 1
 # Mean squared error
 mse = tf.reduce_mean(tf.squared_difference(output, y_))
+# Add trace penalty
 penalty = (tf.real(state.trace()) - 1) ** 2
 penalty = gamma * tf.reduce_mean(penalty)
 loss = mse + penalty
@@ -105,15 +115,15 @@ def batch_generator(arrays, b_size):
             batches.append(batch)
         yield batches
 
+# Load in training data
 f = np.load('training/sinc.npz')
 inputs = f['x']
 actual_output = f['noisy']
 batched_data = batch_generator([inputs, actual_output], batch_size)
 n_batches = inputs.size // batch_size
 
-# Train using gradient descent
 global_step = tf.Variable(0, trainable=False)
-# In original paper for AdaDelta, no learning rate parameter is required.
+# In original paper describing AdaDelta, no learning rate parameter is required.
 # Setting learning_rate = 1.0 in the tensorflow implementation of the algorithm
 # mimics this.
 optimiser = tf.train.AdadeltaOptimizer(learning_rate=1.0, rho=0.95)
@@ -124,7 +134,7 @@ min_op = optimiser.minimize(loss, global_step=global_step)
 init_op = tf.variables_initializer(optimiser.variables() + [global_step])
 sess.run(init_op)
 
-losses = np.zeros(epochs)
+losses = np.zeros(epochs) # Array to keep track of loss after each epoch
 for step in range(epochs):
     total_loss = 0.0 # Keep track of cumulative loss over all batches
     for b in range(n_batches):
@@ -135,16 +145,14 @@ for step in range(epochs):
             y_: batch_out
         })
         total_loss += loss_val
-        if np.isnan(total_loss):
-            pen_val = sess.run(penalty, feed_dict={ x: batch_in, y_: batch_out })
-            print("Trace penalty is: {}".format(pen_val))
-    total_loss /= n_batches # Average loss over all input data
+    total_loss /= n_batches # Average loss over all batches
     print("{}: loss = {}".format(step, total_loss))
-    if np.isnan(total_loss): # Quit if loss diverges
+    if np.isnan(total_loss): # Exit if loss has diverged
         os.sys.exit(1)
-    losses[step] = total_loss # Save loss for later
+    losses[step] = total_loss # Save loss value for this epoch
 
 if should_save:
+    # Create a folder with the current date and time
     now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     dir_name = os.path.join('.', 'save', now_str)
     if not os.path.isdir(dir_name):
@@ -164,10 +172,10 @@ if should_save:
     }
     output_file = os.path.join(dir_name, 'output.npz')
     if os.path.isfile(output_file):
-        # Check file doesn't already exist (it will do if we loaded in a model earlier)
+        # Check file doesn't already exist
         output_file = os.path.join(dir_name, 'output {}.npz'.format(now_str))
-    np.savez(output_file, hyperparams=hyperparams,
-        loss=losses)#, learning_rate=learning_rates)
+    # Save hyperparams and loss values
+    np.savez(output_file, hyperparams=hyperparams, loss=losses)
 
     # Save hyperparams to text file
     with open(os.path.join(dir_name, 'hyperparams.txt'), 'w') as h_file:
@@ -178,14 +186,17 @@ if should_save:
 
 import matplotlib.pyplot as plt
 
+# Calculate the predictions of the network
 sparse_in = np.linspace(-2, 2, batch_size)
 predicted_output = sess.run(output, feed_dict={ x: sparse_in })
 
+# Plot predictions, training data, and "true" (non-noisy) curve
 plt.subplot(1, 2, 1)
 plt.plot(inputs, f['true'], c='g')
 plt.scatter(sparse_in, predicted_output, c='r', marker='x')
 plt.scatter(inputs, actual_output, c='b', marker='o')
 
+# Plot loss values
 plt.subplot(1, 2, 2)
 plt.plot(np.arange(epochs), losses)
 plt.xlabel('Epoch')
