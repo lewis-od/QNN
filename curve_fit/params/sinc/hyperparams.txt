@@ -1,0 +1,2 @@
+{'layers': 6, 'truncation': 10}
+Loss: 0.8453074097633362

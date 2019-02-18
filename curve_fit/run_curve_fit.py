@@ -8,7 +8,7 @@ from strawberryfields.ops import *
 n_layers = 6
 batch_size = 50
 # init_learning_rate = 0.1
-epochs = 500
+epochs = 100
 truncation = 10
 gamma = 10
 should_save = True
@@ -16,13 +16,22 @@ should_save = True
 eng, q = sf.Engine(2)
 
 b_splitters = tf.Variable(initial_value=tf.random_uniform([n_layers, 2], maxval=2*np.pi),
-    dtype=tf.float32, constraint=lambda x: tf.clip_by_value(x, 0, 2*np.pi))
+    dtype=tf.float32, constraint=lambda x: tf.clip_by_value(x, 0, 2*np.pi), name='b_splitters')
 # Squeezing parameters - 2 per layer (1 on each mode)
 rs = tf.Variable(initial_value=tf.random_uniform([n_layers, 2], minval=-1.4, maxval=1.4),
-    dtype=tf.float32, constraint=lambda x: tf.clip_by_value(x, -1.4, 1.4))
+    dtype=tf.float32, constraint=lambda x: tf.clip_by_value(x, -1.4, 1.4), name='rs')
 # Displacement parameters - 2 per layer (1 on each mode)
 alphas = tf.Variable(initial_value=tf.random_normal([n_layers, 2], mean=0, stddev=4),
-    dtype=tf.float32)
+    dtype=tf.float32, name='alphas')
+
+sess = tf.Session()
+# Load in network parameters that were saved by generate_params.py
+if len(os.sys.argv) == 2:
+    saver = tf.train.Saver()
+    saver.restore(sess, os.sys.argv[1])
+    print("Loaded saved model from " + os.sys.argv[1])
+else:
+    sess.run(tf.global_variables_initializer())
 
 x = tf.placeholder(tf.float32, shape=[batch_size])
 y_ = tf.placeholder(tf.float32, shape=[batch_size])
@@ -93,14 +102,10 @@ global_step = tf.Variable(0, trainable=False)
 optimiser = tf.train.AdadeltaOptimizer(learning_rate=1.0, rho=0.95)
 min_op = optimiser.minimize(loss, global_step=global_step)
 
-sess = tf.Session()
-sess.run(tf.global_variables_initializer())
-
-# Load session if command line argument given
-if len(os.sys.argv) == 2:
-    saver = tf.train.Saver()
-    saver.restore(sess, os.sys.argv[1])
-    print("Loaded saved model from " + os.sys.argv[1])
+# Can't run tf.global_variables_initializer() as this will overwrite parameter
+# values that may have been loaded in
+init_op = tf.variables_initializer(optimiser.variables() + [global_step])
+sess.run(init_op)
 
 losses = np.zeros(epochs)
 # learning_rates = np.zeros(epochs)
