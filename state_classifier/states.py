@@ -1,3 +1,4 @@
+import numpy as np
 from strawberryfields.ops import Preparation, Catstate
 from strawberryfields.parameters import (abs, sqrt, transpose, squeeze, _unwrap)
 
@@ -6,8 +7,9 @@ class ONstate(Preparation):
         super().__init__([n, delta])
 
     def _apply(self, reg, backend, **kwargs):
-        n = int(self.p[0].x)
-        delta = self.p[1]
+        p = _unwrap(self.p)
+        n = int(p[0])
+        delta = p[1]
 
         D = backend.get_cutoff_dim()
         vac = np.zeros(D)[:, np.newaxis]
@@ -22,7 +24,7 @@ class ONstate(Preparation):
         ket = transpose(ket)
         ket = squeeze(ket)
 
-        backend.prepare_ket_state(ket.x, *reg)
+        backend.prepare_ket_state(ket, *reg)
 
 class SqueezedCatstate(Catstate):
     def __init__(self, alpha=0, p=0, r=0):

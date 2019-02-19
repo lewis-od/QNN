@@ -4,7 +4,7 @@ import strawberryfields as sf
 from strawberryfields.ops import *
 from states import ONstate, SqueezedCatstate
 
-n_states = 100
+n_states = 5000
 truncation = 10
 
 eng, q = sf.Engine(1)
@@ -34,10 +34,10 @@ for i in range(n_gaussian):
     states[i, :] = state
     eng.reset()
 
-
-state_types = [Catstate, Vgate, Fock, SqueezedCatstate]
+state_types = np.zeros(5)
 for i in range(n_non_gaussian):
-    type = np.random.randint(0, 4)
+    type = np.random.randint(0, 5)
+    state_types[type] += 1
     Gate = None
     if type == 0: # Cat state
         alpha = rand_complex(2.0)
@@ -54,6 +54,10 @@ for i in range(n_non_gaussian):
         p = np.random.randint(0, 2)
         r = rand_complex(1.4)
         Gate = SqueezedCatstate(alpha, p, r)
+    elif type == 4: # ON state
+        n = np.random.randint(truncation)
+        delta = np.random.rand()
+        Gate = ONstate(n, delta)
     with eng:
         Gate | q[0]
     state = eng.run('fock', cutoff_dim=10).ket()
@@ -64,5 +68,8 @@ save_dir = os.path.join(".", "data")
 if not os.path.isdir(save_dir):
     os.makedirs(save_dir)
 
+state_names = ['cat', 'cp', 'fock', 'sq_cat', 'ON']
+state_types = dict(zip(state_names, state_types))
+
 save_file = os.path.join(save_dir, "states.npz")
-np.savez(save_file, states=states, labels=labels)
+np.savez(save_file, states=states, labels=labels, types=state_types)
