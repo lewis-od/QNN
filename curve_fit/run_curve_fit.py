@@ -123,10 +123,12 @@ batched_data = batch_generator([inputs, actual_output], batch_size)
 n_batches = inputs.size // batch_size
 
 global_step = tf.Variable(0, trainable=False)
+learning_rate = tf.train.exponential_decay(0.05, global_step, n_batches*5, 0.95)
+optimiser = tf.train.AdamOptimizer(learning_rate=learning_rate)
 # In original paper describing AdaDelta, no learning rate parameter is required.
 # Setting learning_rate = 1.0 in the tensorflow implementation of the algorithm
 # mimics this.
-optimiser = tf.train.AdadeltaOptimizer(learning_rate=1.0, rho=0.95)
+# optimiser = tf.train.AdadeltaOptimizer(learning_rate=1.0, rho=0.95)
 min_op = optimiser.minimize(loss, global_step=global_step)
 
 # Can't run tf.global_variables_initializer() as this will overwrite parameter
