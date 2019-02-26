@@ -18,11 +18,11 @@ eng, q = sf.Engine(2) # Intitialise strawberry fields with a 2 mode system
 # Beam splitter parameters - 2 per layer (2 interferometers)
 b_splitters = tf.Variable(initial_value=tf.random_uniform([n_layers, 2], maxval=2*np.pi),
     dtype=tf.float32, constraint=lambda x: tf.clip_by_value(x, 0, 2*np.pi), name='b_splitters')
-# Squeezing parameters - 2 per layer (1 on each mode)
-rs = tf.Variable(initial_value=tf.random_uniform([n_layers, 2], minval=-1.4, maxval=1.4),
+# Squeezing parameters - 1 per layer
+rs = tf.Variable(initial_value=tf.random_uniform([n_layers], minval=-1.4, maxval=1.4),
     dtype=tf.float32, constraint=lambda x: tf.clip_by_value(x, -1.4, 1.4), name='rs')
-# Displacement parameters - 2 per layer (1 on each mode)
-alphas = tf.Variable(initial_value=tf.random_normal([n_layers, 2], mean=0, stddev=4),
+# Displacement parameters - 1 per layer
+alphas = tf.Variable(initial_value=tf.random_normal([n_layers], mean=0, stddev=4),
     dtype=tf.float32, name='alphas')
 
 sess = tf.Session()
@@ -68,18 +68,16 @@ def build_layer(n):
     BSgate(b_splitters[n][0], -np.pi/4) | (q[0], q[1])
 
     # Squeezing
-    Sgate(rs[n][0]) | q[0]
-    Sgate(rs[n][1]) | q[1]
+    Sgate(rs[n]) | q[1]
 
     # Interferometer
     BSgate(b_splitters[n][1], -np.pi/4) | (q[0], q[1])
 
     # Displacement
-    Dgate(alphas[n][0]) | q[0]
-    Dgate(alphas[n][1]) | q[1]
+    Dgate(alphas[n]) | q[1]
 
     # Measure ancilla mode
-    MeasureFock(select=2) | q[0]
+    MeasureFock(select=1) | q[0]
 
 # Build the neural network
 with eng:
@@ -123,12 +121,12 @@ batched_data = batch_generator([inputs, actual_output], batch_size)
 n_batches = inputs.size // batch_size
 
 global_step = tf.Variable(0, trainable=False)
-learning_rate = tf.train.exponential_decay(0.05, global_step, n_batches*5, 0.95)
-optimiser = tf.train.AdamOptimizer(learning_rate=learning_rate)
+# learning_rate = tf.train.exponential_decay(0.05, global_step, n_batches*5, 0.95)
+# optimiser = tf.train.AdamOptimizer(learning_rate=learning_rate)
 # In original paper describing AdaDelta, no learning rate parameter is required.
 # Setting learning_rate = 1.0 in the tensorflow implementation of the algorithm
 # mimics this.
-# optimiser = tf.train.AdadeltaOptimizer(learning_rate=1.0, rho=0.95)
+optimiser = tf.train.AdadeltaOptimizer(learning_rate=1.0, rho=0.95)
 min_op = optimiser.minimize(loss, global_step=global_step)
 
 # Can't run tf.global_variables_initializer() as this will overwrite parameter

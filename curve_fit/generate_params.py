@@ -15,19 +15,24 @@ loss_threshold = 2.0 # Keep randomly generating params until loss < threshold
 
 eng, q = sf.Engine(2)
 
+# Beam splitter parameters - 2 per layer (2 interferometers)
 b_splitters = tf.Variable(initial_value=tf.random_uniform([n_layers, 2], maxval=2*np.pi),
     dtype=tf.float32, constraint=lambda x: tf.clip_by_value(x, 0, 2*np.pi), name='b_splitters')
-# Squeezing parameters - 2 per layer (1 on each mode)
-rs = tf.Variable(initial_value=tf.random_uniform([n_layers, 2], minval=-1.4, maxval=1.4),
+# Squeezing parameters - 1 per layer
+rs = tf.Variable(initial_value=tf.random_uniform([n_layers], minval=-1.4, maxval=1.4),
     dtype=tf.float32, constraint=lambda x: tf.clip_by_value(x, -1.4, 1.4), name='rs')
-# Displacement parameters - 2 per layer (1 on each mode)
-alphas = tf.Variable(initial_value=tf.random_normal([n_layers, 2], mean=0, stddev=4),
+# Displacement parameters - 1 per layer
+alphas = tf.Variable(initial_value=tf.random_normal([n_layers], mean=0, stddev=4),
     dtype=tf.float32, name='alphas')
 
 x = tf.placeholder(tf.float32, shape=[batch_size])
 y_ = tf.placeholder(tf.float32, shape=[batch_size])
 
 def build_layer(n):
+    """
+    Build one layer of the neural network
+    :param n: Integer indicating which layer we are building
+    """
     # Ancilla state
     Vac | q[0]
 
@@ -35,18 +40,16 @@ def build_layer(n):
     BSgate(b_splitters[n][0], -np.pi/4) | (q[0], q[1])
 
     # Squeezing
-    Sgate(rs[n][0]) | q[0]
-    Sgate(rs[n][1]) | q[1]
+    Sgate(rs[n]) | q[1]
 
     # Interferometer
     BSgate(b_splitters[n][1], -np.pi/4) | (q[0], q[1])
 
     # Displacement
-    Dgate(alphas[n][0]) | q[0]
-    Dgate(alphas[n][1]) | q[1]
+    Dgate(alphas[n]) | q[1]
 
     # Measure ancilla mode
-    MeasureFock(select=2) | q[0]
+    MeasureFock(select=1) | q[0]
 
 with eng:
     Dgate(x) | q[1] # Encode data as displacement along real axis
