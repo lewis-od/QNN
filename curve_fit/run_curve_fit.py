@@ -6,14 +6,19 @@ import strawberryfields as sf
 from datetime import datetime
 from strawberryfields.ops import *
 
+# ----- Hyperparameters -----
+
 n_layers = 6 # Number of layers in neural network
 batch_size = 50 # Batch size used in training
 epochs = 500 # Number of epochs to use
 truncation = 10 # Cutoff dimension for strawberry fields
 gamma = 10 # Multiplier for trace penalty
 should_save = True # Whether or not to save the results
+ancilla_state_n = 0 # Photon number of ancilla Fock state
+post_select = 1 # Number of photons to perform post selection on
+train_file = 'sinc.npz' # File to load training data from
 
-eng, q = sf.Engine(2) # Intitialise strawberry fields with a 2 mode system
+# ----- Tensorflow variables -----
 
 # Beam splitter parameters - 2 per layer (2 interferometers)
 b_splitters = tf.Variable(initial_value=tf.random_uniform([n_layers, 2], maxval=2*np.pi),
@@ -56,13 +61,17 @@ else: # No file provided, generate parameters randomly
 x = tf.placeholder(tf.float32, shape=[batch_size]) # Input to neural network
 y_ = tf.placeholder(tf.float32, shape=[batch_size]) # Expected output (used to calculate loss)
 
+# ----- Build neural network circuit using strawberryfields -----
+
+eng, q = sf.Engine(2) # Intitialise strawberry fields with a 2 mode system
+
 def build_layer(n):
     """
     Build one layer of the neural network
     :param n: Integer indicating which layer we are building
     """
     # Ancilla state
-    Vac | q[0]
+    Fock(ancilla_state_n) | q[0]
 
     # Interferometer
     BSgate(b_splitters[n][0], -np.pi/4) | (q[0], q[1])
@@ -77,7 +86,7 @@ def build_layer(n):
     Dgate(alphas[n]) | q[1]
 
     # Measure ancilla mode
-    MeasureFock(select=1) | q[0]
+    MeasureFock(select=post_select) | q[0]
 
 # Build the neural network
 with eng:
@@ -85,6 +94,8 @@ with eng:
 
     for n in range(n_layers):
         build_layer(n)
+
+# ----- Run the simulation and calculate the loss function -----
 
 state = eng.run('tf', cutoff_dim=truncation, eval=False, batch_size=batch_size)
 output = state.quad_expectation(1)[0] # Position quadrature on mode 1
@@ -94,6 +105,8 @@ mse = tf.reduce_mean(tf.squared_difference(output, y_))
 penalty = (tf.real(state.trace()) - 1) ** 2
 penalty = gamma * tf.reduce_mean(penalty)
 loss = mse + penalty
+
+# ----- Load and prepare training data -----
 
 def batch_generator(arrays, b_size):
     """Groups data in the arrays list into batches of size b_size"""
@@ -114,11 +127,13 @@ def batch_generator(arrays, b_size):
         yield batches
 
 # Load in training data
-f = np.load('training/sinc.npz')
+f = np.load(os.path.join('training', train_file))
 inputs = f['x']
 actual_output = f['noisy']
 batched_data = batch_generator([inputs, actual_output], batch_size)
 n_batches = inputs.size // batch_size
+
+# ----- Train the neural network -----
 
 global_step = tf.Variable(0, trainable=False)
 # learning_rate = tf.train.exponential_decay(0.05, global_step, n_batches*5, 0.95)
@@ -151,10 +166,16 @@ for step in range(epochs):
         os.sys.exit(1)
     losses[step] = total_loss # Save loss value for this epoch
 
+# ----- Save and plot results -----
+
+# Calculate the predictions of the network
+sparse_in = np.linspace(-2, 2, batch_size)
+predicted_output = sess.run(output, feed_dict={ x: sparse_in })
+
 if should_save:
     # Create a folder with the current date and time
     now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    dir_name = os.path.join('.', 'save', now_str)
+    dir_name = os.path.join('.', 'results', now_str)
     if not os.path.isdir(dir_name):
         os.makedirs(dir_name)
 
@@ -168,27 +189,27 @@ if should_save:
         'batch_size': batch_size,
         'epochs': epochs,
         'truncation': truncation,
-        'gamma': gamma
+        'gamma': gamma,
+        'ancilla_state': ancilla_state_n,
+        'post_select': post_select
     }
     output_file = os.path.join(dir_name, 'output.npz')
     if os.path.isfile(output_file):
         # Check file doesn't already exist
         output_file = os.path.join(dir_name, 'output {}.npz'.format(now_str))
     # Save hyperparams and loss values
-    np.savez(output_file, hyperparams=hyperparams, loss=losses)
+    np.savez(output_file, hyperparams=hyperparams, loss=losses,
+        inputs=sparse_in, predictions=predicted_output)
 
     # Save hyperparams to text file
     with open(os.path.join(dir_name, 'hyperparams.txt'), 'w') as h_file:
         print(hyperparams, file=h_file)
+        print("Training data: " + train_file)
         print("Optimiser: " + optimiser.get_name(), file=h_file)
 
     print("Saved to: " + dir_name)
 
 import matplotlib.pyplot as plt
-
-# Calculate the predictions of the network
-sparse_in = np.linspace(-2, 2, batch_size)
-predicted_output = sess.run(output, feed_dict={ x: sparse_in })
 
 # Plot predictions, training data, and "true" (non-noisy) curve
 plt.subplot(1, 2, 1)

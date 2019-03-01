@@ -2,4 +2,5 @@
 *.pyc
 save/*
 curve_fit/save
+curve_fit/results
 state_classifier/save
