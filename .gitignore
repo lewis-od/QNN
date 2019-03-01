@@ -1,4 +1,5 @@
 .DS_Store
 *.pyc
 save/*
-curve_fit/save/*
+curve_fit/save
+state_classifier/save

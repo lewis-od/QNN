@@ -23,8 +23,8 @@ labels[n_gaussian:] = np.ones(n_non_gaussian)
 # Array to hold state data
 states = np.zeros([n_states, 3], dtype=np.complex64)
 
-squeezing = rand_complex(1.4, n_states)
-displacement = rand_complex(3.0, n_states)
+squeezing = rand_complex(0.5, n_states)
+displacement = rand_complex(1.0, n_states)
 kappas = np.random.rand(n_non_gaussian)
 
 states[:, 0] = squeezing

@@ -2,8 +2,10 @@ import os
 import numpy as np
 import strawberryfields as sf
 import tensorflow as tf
+from datetime import datetime
 from strawberryfields.ops import *
 
+# ----- Hyperparameters ------
 n_layers = 6
 batch_size = 100
 epochs = 10
@@ -15,6 +17,8 @@ gaussian_x = 1.0
 gaussian_p = 0.0
 non_gaussian_x = -1.0
 non_gaussian_p = 0.0
+
+# ----- Setup tensorflow variables -----
 
 eng, q = sf.Engine(1)
 
@@ -32,6 +36,8 @@ kappas = tf.Variable(initial_value=tf.random_normal([n_layers], mean=0, stddev=1
 
 x = tf.placeholder(tf.complex64, shape=[batch_size, 3]) # Parameters for input states
 y_ = tf.placeholder(tf.int32, shape=[2, batch_size]) # Labels in logit format
+
+# ----- Build quantum circuit -----
 
 def build_layer(n):
     # Interferometer
@@ -58,6 +64,8 @@ with eng:
     for n in range(n_layers):
         build_layer(n)
 
+# ------ Load and prepare training data -----
+
 f = np.load('data/states.npz')
 in_states = f['states']
 indices = f['labels'].astype(np.int) # List containing 0s or 1s
@@ -65,6 +73,8 @@ indices = f['labels'].astype(np.int) # List containing 0s or 1s
 perm = np.random.permutation(indices.size)
 in_states = in_states[perm, :]
 indices = indices[perm]
+
+# ----- Run circuit and calculate loss -----
 
 state = eng.run('tf', cutoff_dim=truncation, eval=False, batch_size=batch_size)
 output_x = state.quad_expectation(0)[0]
@@ -96,6 +106,8 @@ penalty = tf.squared_difference(tf.real(state.trace()), 1)
 penalty = gamma * tf.reduce_mean(penalty)
 loss = softmax_loss + penalty
 
+# ----- Train the network -----
+
 def batch_generator(arrays, b_size):
     """Groups data in the arrays list into batches of size b_size"""
     starts = [0] * len(arrays)
@@ -117,9 +129,9 @@ def batch_generator(arrays, b_size):
 batched_data = batch_generator([in_states, indices], batch_size)
 n_batches = indices.size // batch_size
 
-# global_step = tf.Variable(0, trainable=False)
-# learning_rate = tf.train.exponential_decay(0.2, global_step, n_batches*5, 0.95)
-optimiser = tf.train.AdadeltaOptimizer(learning_rate=1.0, rho=0.95)
+global_step = tf.Variable(0, trainable=False)
+learning_rate = tf.train.exponential_decay(0.1, global_step, n_batches*10, 0.95)
+optimiser = tf.train.AdamOptimizer(learning_rate=learning_rate)
 min_op = optimiser.minimize(loss)
 
 sess = tf.Session()
@@ -144,6 +156,41 @@ for step in range(epochs):
     print("[{}]: {}".format(step, total_loss))
     if np.isnan(total_loss):
         os.sys.exit(1)
+
+# ----- Save model -----
+
+now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+dir_name = os.path.join('.', 'save', now_str)
+if not os.path.isdir(dir_name):
+    os.makedirs(dir_name)
+
+# Save tensorflow model
+saver = tf.train.Saver(var_list=[b_splitters, rs, alphas, kappas])
+saver.save(sess, os.path.join(dir_name, 'model.ckpt'))
+
+# Save hyperparams, losses, and training rates using numpy
+hyperparams = {
+    'layers': n_layers,
+    'batch_size': batch_size,
+    'epochs': epochs,
+    'truncation': truncation,
+    'gamma': gamma
+}
+output_file = os.path.join(dir_name, 'output.npz')
+if os.path.isfile(output_file):
+    # Check file doesn't already exist
+    output_file = os.path.join(dir_name, 'output {}.npz'.format(now_str))
+# Save hyperparams and loss values
+np.savez(output_file, hyperparams=hyperparams, loss=losses)
+
+# Save hyperparams to text file
+with open(os.path.join(dir_name, 'hyperparams.txt'), 'w') as h_file:
+    print(hyperparams, file=h_file)
+    print("Optimiser: " + optimiser.get_name(), file=h_file)
+
+print("Saved to: " + dir_name)
+
+# ----- Plot results -----
 
 # Run selection of states through the network to plot the outputs
 gaussian_params = in_states[indices == 0, :]
