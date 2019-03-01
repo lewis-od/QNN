@@ -15,8 +15,8 @@ truncation = 10 # Cutoff dimension for strawberry fields
 gamma = 10 # Multiplier for trace penalty
 should_save = True # Whether or not to save the results
 ancilla_state_n = 0 # Photon number of ancilla Fock state
-post_select = 1 # Number of photons to perform post selection on
-train_file = 'sinc.npz' # File to load training data from
+post_select = 1 # Photon number for post-selection measurement on ancilla mode
+train_file = 'sin.npz' # File to load training data from
 
 # ----- Tensorflow variables -----
 
@@ -32,15 +32,21 @@ alphas = tf.Variable(initial_value=tf.random_normal([n_layers], mean=0, stddev=4
 
 sess = tf.Session()
 # Load in network parameters that were saved by generate_params.py
-if len(os.sys.argv) == 2:
-    ckpt_file = os.sys.argv[1]
-    # Load in saved parameters
+dataset_name = train_file.split('.')[0]
+ckpt_file = os.path.join('params', dataset_name, 'model.ckpt')
+# Load in saved parameters
+try:
     saver = tf.train.Saver()
     saver.restore(sess, ckpt_file)
+    print("Loaded model from " + ckpt_file)
+except:
+    print("Unable to load model from " + ckpt_file)
+    sess.run(tf.global_variables_initializer())
 
-    # File containing hyperparameter values (n_layers, batch_size, etc)
-    # If these are different from the ones set above, we will get errors
-    hyper_file = os.path.join(os.path.split(ckpt_file)[0], "hyperparams.txt")
+# File containing hyperparameter values (n_layers, batch_size, etc)
+# If these are different from the ones set above, we will get errors
+hyper_file = os.path.join(os.path.split(ckpt_file)[0], "hyperparams.txt")
+if os.path.isfile(hyper_file):
     with open(hyper_file, 'r') as f:
         param_str = f.readline() # Hyperparams dict on first line of file
     loaded_params = ast.literal_eval(param_str) # Convert string -> dict
@@ -51,12 +57,11 @@ if len(os.sys.argv) == 2:
             print("Error parsing hyperparams.txt")
             os.sys.exit(1)
         if actual_val != val:
-            print("Error: Loaded parameters not compatible with current settings")
+            print("Error: Loaded hyperparameters don't match current values")
             print("Expected {} to be {} but got {}".format(param_name, actual_val, val))
             os.sys.exit(1)
-    print("Loaded saved model from " + ckpt_file)
-else: # No file provided, generate parameters randomly
-    sess.run(tf.global_variables_initializer())
+else:
+    print("No hyperparams.txt found")
 
 x = tf.placeholder(tf.float32, shape=[batch_size]) # Input to neural network
 y_ = tf.placeholder(tf.float32, shape=[batch_size]) # Expected output (used to calculate loss)
