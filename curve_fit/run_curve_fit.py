@@ -174,7 +174,7 @@ for step in range(epochs):
 # ----- Save and plot results -----
 
 # Calculate the predictions of the network
-sparse_in = np.linspace(-2, 2, batch_size)
+sparse_in = np.linspace(inputs.min(), inputs.max(), batch_size)
 predicted_output = sess.run(output, feed_dict={ x: sparse_in })
 
 if should_save:
