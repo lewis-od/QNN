@@ -1,0 +1,2 @@
+{'n_layers': 6, 'truncation': 10, 'batch_size': 50}
+Loss: 0.4079603850841522

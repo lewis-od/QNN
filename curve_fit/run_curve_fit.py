@@ -16,7 +16,7 @@ gamma = 10 # Multiplier for trace penalty
 should_save = True # Whether or not to save the results
 ancilla_state_n = 0 # Photon number of ancilla Fock state
 post_select = 1 # Photon number for post-selection measurement on ancilla mode
-train_file = 'sin.npz' # File to load training data from
+train_file = 'sinc.npz' # File to load training data from
 
 # ----- Tensorflow variables -----
 
@@ -134,7 +134,7 @@ def batch_generator(arrays, b_size):
 # Load in training data
 f = np.load(os.path.join('training', train_file))
 inputs = f['x']
-actual_output = f['noisy']
+actual_output = f['y']
 batched_data = batch_generator([inputs, actual_output], batch_size)
 n_batches = inputs.size // batch_size
 
@@ -190,12 +190,12 @@ if should_save:
 
     # Save hyperparams, losses, and training rates using numpy
     hyperparams = {
-        'layers': n_layers,
+        'n_layers': n_layers,
         'batch_size': batch_size,
         'epochs': epochs,
         'truncation': truncation,
         'gamma': gamma,
-        'ancilla_state': ancilla_state_n,
+        'ancilla_state_n': ancilla_state_n,
         'post_select': post_select
     }
     output_file = os.path.join(dir_name, 'output.npz')
@@ -218,7 +218,7 @@ import matplotlib.pyplot as plt
 
 # Plot predictions, training data, and "true" (non-noisy) curve
 plt.subplot(1, 2, 1)
-plt.plot(inputs, f['true'], c='g')
+plt.plot(f['x_true'], f['y_true'], c='g')
 plt.scatter(sparse_in, predicted_output, c='r', marker='x')
 plt.scatter(inputs, actual_output, c='b', marker='o')
 

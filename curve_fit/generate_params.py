@@ -5,12 +5,18 @@ import tensorflow as tf
 import strawberryfields as sf
 from strawberryfields.ops import *
 
+if len(os.sys.argv) < 2:
+    print("Please supply a file containing training data")
+    os.sys.exit(1)
+
 n_layers = 6
 batch_size = 50
 truncation = 10
 gamma = 10
 should_save = True
-train_file = 'sinc.npz' # File to load training data from (in the 'training' dir)
+train_file = os.sys.argv[1] # File to load training data from
+ancilla_state_n = 0 # Photon number of ancilla Fock state
+post_select = 1 # Photon number for post-selection measurement on ancilla mode
 loss_threshold = 2.0 # Keep randomly generating params until loss < threshold
 
 eng, q = sf.Engine(2)
@@ -34,7 +40,7 @@ def build_layer(n):
     :param n: Integer indicating which layer we are building
     """
     # Ancilla state
-    Vac | q[0]
+    Fock(ancilla_state_n) | q[0]
 
     # Interferometer
     BSgate(b_splitters[n][0], -np.pi/4) | (q[0], q[1])
@@ -49,7 +55,7 @@ def build_layer(n):
     Dgate(alphas[n]) | q[1]
 
     # Measure ancilla mode
-    MeasureFock(select=1) | q[0]
+    MeasureFock(select=post_select) | q[0]
 
 with eng:
     Dgate(x) | q[1] # Encode data as displacement along real axis
@@ -83,9 +89,9 @@ def batch_generator(arrays, b_size):
             batches.append(batch)
         yield batches
 
-f = np.load(os.path.join('training', train_file))
+f = np.load(train_file)
 inputs = f['x']
-actual_output = f['noisy']
+actual_output = f['y']
 batched_data = batch_generator([inputs, actual_output], batch_size)
 n_batches = inputs.size // batch_size
 
@@ -110,7 +116,8 @@ while True:
     sess.run(tf.global_variables_initializer())
 
 if should_save:
-    train_file_base = train_file.split('.')[0]
+    train_file_name = os.path.split(train_file)[-1]
+    train_file_base = train_file_name.split('.')[0]
     dir_name = os.path.join('.', 'params', train_file_base)
     if not os.path.isdir(dir_name):
         os.makedirs(dir_name)
@@ -122,8 +129,11 @@ if should_save:
     # Save hyperparams, losses, and training rates using numpy
     hyperparams = {
         'n_layers': n_layers,
+        'batch_size': batch_size,
         'truncation': truncation,
-        'batch_size': batch_size
+        'gamma': gamma,
+        'ancilla_state_n': ancilla_state_n,
+        'post_select': post_select
     }
     # Save hyperparams to text file
     with open(os.path.join(dir_name, 'hyperparams.txt'), 'w') as h_file:
