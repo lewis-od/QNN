@@ -10,13 +10,13 @@ from strawberryfields.ops import *
 
 n_layers = 6 # Number of layers in neural network
 batch_size = 50 # Batch size used in training
-epochs = 500 # Number of epochs to use
+epochs = 2000 # Number of epochs to use
 truncation = 10 # Cutoff dimension for strawberry fields
 gamma = 10 # Multiplier for trace penalty
 should_save = True # Whether or not to save the results
-ancilla_state_n = 0 # Photon number of ancilla Fock state
-post_select = 1 # Photon number for post-selection measurement on ancilla mode
-train_file = 'sinc.npz' # File to load training data from
+ancilla_state_n = 1 # Photon number of ancilla Fock state
+post_select = 0 # Photon number for post-selection measurement on ancilla mode
+train_file = 'sin.npz' # File to load training data from
 
 # ----- Tensorflow variables -----
 
@@ -42,26 +42,6 @@ try:
 except:
     print("Unable to load model from " + ckpt_file)
     sess.run(tf.global_variables_initializer())
-
-# File containing hyperparameter values (n_layers, batch_size, etc)
-# If these are different from the ones set above, we will get errors
-hyper_file = os.path.join(os.path.split(ckpt_file)[0], "hyperparams.txt")
-if os.path.isfile(hyper_file):
-    with open(hyper_file, 'r') as f:
-        param_str = f.readline() # Hyperparams dict on first line of file
-    loaded_params = ast.literal_eval(param_str) # Convert string -> dict
-    for param_name, val in loaded_params.items():
-        try:
-            actual_val = eval(param_name) # Value of hyperparam set in this file
-        except Exception:
-            print("Error parsing hyperparams.txt")
-            os.sys.exit(1)
-        if actual_val != val:
-            print("Error: Loaded hyperparameters don't match current values")
-            print("Expected {} to be {} but got {}".format(param_name, actual_val, val))
-            os.sys.exit(1)
-else:
-    print("No hyperparams.txt found")
 
 x = tf.placeholder(tf.float32, shape=[batch_size]) # Input to neural network
 y_ = tf.placeholder(tf.float32, shape=[batch_size]) # Expected output (used to calculate loss)
@@ -166,7 +146,7 @@ for step in range(epochs):
         })
         total_loss += loss_val
     total_loss /= n_batches # Average loss over all batches
-    print("{}: loss = {}".format(step, total_loss))
+    print("[{}]: {}".format(step, total_loss))
     if np.isnan(total_loss): # Exit if loss has diverged
         os.sys.exit(1)
     losses[step] = total_loss # Save loss value for this epoch
@@ -209,7 +189,7 @@ if should_save:
     # Save hyperparams to text file
     with open(os.path.join(dir_name, 'hyperparams.txt'), 'w') as h_file:
         print(hyperparams, file=h_file)
-        print("Training data: " + train_file)
+        print("Training data: " + train_file, file=h_file)
         print("Optimiser: " + optimiser.get_name(), file=h_file)
 
     print("Saved to: " + dir_name)
