@@ -69,10 +69,6 @@ with eng:
 f = np.load('data/states.npz')
 in_states = f['states']
 indices = f['labels'].astype(np.int) # List containing 0s or 1s
-# Permute data to mix gaussian <-> non-gaussian
-perm = np.random.permutation(indices.size)
-in_states = in_states[perm, :]
-indices = indices[perm]
 
 # ----- Run circuit and calculate loss -----
 

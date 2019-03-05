@@ -31,6 +31,11 @@ states[:, 0] = squeezing
 states[:, 1] = displacement
 states[n_gaussian:, 2] = kappas
 
+# Randomly permute states
+perm = np.random.permutation(n_states)
+states = states[perm, :]
+labels = labels[perm]
+
 # Create save directory if it doesn't exist
 save_dir = os.path.join(".", "data")
 if not os.path.isdir(save_dir):
