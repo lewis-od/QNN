@@ -34,6 +34,7 @@ def test_truncations(states, truncations=[10, 15, 20]):
         plt.hist(traces[:, n], bins=25)
         plt.xlabel("Trace")
         plt.ylabel("Frequency")
+        plt.ylim([0, batch_size])
     plt.show()
 
 if __name__ == '__main__':

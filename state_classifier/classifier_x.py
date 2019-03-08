@@ -8,7 +8,7 @@ from strawberryfields.ops import *
 # ----- Hyperparameters ------
 n_layers = 6
 batch_size = 100
-epochs = 10
+epochs = 1000
 truncation = 10
 gamma = 10
 
@@ -87,12 +87,8 @@ dp_ng = tf.squared_difference(output_p, non_gaussian_p)
 dist_ng = tf.sqrt(dx_ng + dp_ng)
 
 # Smaller distance => Larger probability
-act_g = tf.reciprocal(dist_g)
-act_ng = tf.reciprocal(dist_ng)
-
-# If dist = 0, act will be inf. Replace with suitably large number instead
-act_g = tf.where(tf.is_inf(act_g), tf.ones_like(act_g)*1e5, act_g)
-act_ng = tf.where(tf.is_inf(act_ng), tf.ones_like(act_ng)*1e5, act_ng)
+act_g = tf.exp(-dist_g)
+act_ng = tf.exp(-dist_ng)
 
 logits = tf.stack([act_g, act_ng])
 softmax_loss = tf.nn.softmax_cross_entropy_with_logits_v2(labels=y_, logits=logits)
