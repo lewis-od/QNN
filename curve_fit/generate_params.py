@@ -15,8 +15,8 @@ truncation = 10
 gamma = 10
 should_save = True
 train_file = os.sys.argv[1] # File to load training data from
-ancilla_state_n = 0 # Photon number of ancilla Fock state
-post_select = 1 # Photon number for post-selection measurement on ancilla mode
+ancilla_state_n = 2 # Photon number of ancilla Fock state
+post_select = 0 # Photon number for post-selection measurement on ancilla mode
 loss_threshold = 2.0 # Keep randomly generating params until loss < threshold
 
 eng, q = sf.Engine(2)
