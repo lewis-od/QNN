@@ -1,5 +1,4 @@
 import os
-import ast
 import numpy as np
 import tensorflow as tf
 import strawberryfields as sf
@@ -14,9 +13,9 @@ epochs = 2000 # Number of epochs to use
 truncation = 10 # Cutoff dimension for strawberry fields
 gamma = 10 # Multiplier for trace penalty
 should_save = True # Whether or not to save the results
-ancilla_state_n = 1 # Photon number of ancilla Fock state
+ancilla_state_n = 2 # Photon number of ancilla Fock state
 post_select = 0 # Photon number for post-selection measurement on ancilla mode
-train_file = 'sin.npz' # File to load training data from
+train_file = 'x_cubed.npz' # File to load training data from
 
 # ----- Tensorflow variables -----
 
@@ -134,6 +133,8 @@ min_op = optimiser.minimize(loss, global_step=global_step)
 init_op = tf.variables_initializer(optimiser.variables() + [global_step])
 sess.run(init_op)
 
+start_time = datetime.now()
+
 losses = np.zeros(epochs) # Array to keep track of loss after each epoch
 for step in range(epochs):
     total_loss = 0.0 # Keep track of cumulative loss over all batches
@@ -151,6 +152,9 @@ for step in range(epochs):
         os.sys.exit(1)
     losses[step] = total_loss # Save loss value for this epoch
 
+time_elapsed = datetime.now() - start_time
+print("Time Elapsed: {}".format(time_elapsed))
+
 # ----- Save and plot results -----
 
 # Calculate the predictions of the network
@@ -159,10 +163,13 @@ predicted_output = sess.run(output, feed_dict={ x: sparse_in })
 
 if should_save:
     # Create a folder with the current date and time
-    now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    dir_name = os.path.join('.', 'results', now_str)
-    if not os.path.isdir(dir_name):
-        os.makedirs(dir_name)
+    training_set = train_file.split('.')[0]
+    dir_str = '{}-{}-{}'.format(training_set, ancilla_state_n, post_select)
+    dir_name = os.path.join('.', 'results', dir_str)
+    if os.path.isdir(dir_name):
+        now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        dir_name += now_str
+    os.makedirs(dir_name)
 
     # Save tensorflow model
     saver = tf.train.Saver(var_list=[b_splitters, rs, alphas])
