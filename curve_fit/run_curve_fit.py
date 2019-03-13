@@ -13,14 +13,14 @@ epochs = 2000 # Number of epochs to use
 truncation = 10 # Cutoff dimension for strawberry fields
 gamma = 10 # Multiplier for trace penalty
 should_save = True # Whether or not to save the results
-ancilla_state_n = 2 # Photon number of ancilla Fock state
-post_select = 0 # Photon number for post-selection measurement on ancilla mode
+ancilla_state_n = 0 # Photon number of ancilla Fock state
+post_select = 1 # Photon number for post-selection measurement on ancilla mode
 train_file = 'x_cubed.npz' # File to load training data from
 
 # ----- Tensorflow variables -----
 
 # Beam splitter parameters - 2 per layer (2 interferometers)
-b_splitters = tf.Variable(initial_value=tf.random_uniform([n_layers, 2], maxval=2*np.pi),
+b_splitters = tf.Variable(initial_value=tf.random_uniform([n_layers, 4], maxval=2*np.pi),
     dtype=tf.float32, constraint=lambda x: tf.clip_by_value(x, 0, 2*np.pi), name='b_splitters')
 # Squeezing parameters - 1 per layer
 rs = tf.Variable(initial_value=tf.random_uniform([n_layers], minval=-1.4, maxval=1.4),
@@ -58,13 +58,13 @@ def build_layer(n):
     Fock(ancilla_state_n) | q[0]
 
     # Interferometer
-    BSgate(b_splitters[n][0], -np.pi/4) | (q[0], q[1])
+    BSgate(b_splitters[n][0], b_splitters[n][2]) | (q[0], q[1])
 
     # Squeezing
     Sgate(rs[n]) | q[1]
 
     # Interferometer
-    BSgate(b_splitters[n][1], -np.pi/4) | (q[0], q[1])
+    BSgate(b_splitters[n][1], b_splitters[n][3]) | (q[0], q[1])
 
     # Displacement
     Dgate(alphas[n]) | q[1]
