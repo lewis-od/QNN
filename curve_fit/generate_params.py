@@ -15,14 +15,14 @@ truncation = 10
 gamma = 10
 should_save = True
 train_file = os.sys.argv[1] # File to load training data from
-ancilla_state_n = 2 # Photon number of ancilla Fock state
-post_select = 0 # Photon number for post-selection measurement on ancilla mode
-loss_threshold = 2.0 # Keep randomly generating params until loss < threshold
+ancilla_state_n = 0 # Photon number of ancilla Fock state
+post_select = 1 # Photon number for post-selection measurement on ancilla mode
+loss_threshold = 1.0 # Keep randomly generating params until loss < threshold
 
 eng, q = sf.Engine(2)
 
 # Beam splitter parameters - 2 per layer (2 interferometers)
-b_splitters = tf.Variable(initial_value=tf.random_uniform([n_layers, 2], maxval=2*np.pi),
+b_splitters = tf.Variable(initial_value=tf.random_uniform([n_layers, 4], maxval=2*np.pi),
     dtype=tf.float32, constraint=lambda x: tf.clip_by_value(x, 0, 2*np.pi), name='b_splitters')
 # Squeezing parameters - 1 per layer
 rs = tf.Variable(initial_value=tf.random_uniform([n_layers], minval=-1.4, maxval=1.4),
@@ -43,13 +43,13 @@ def build_layer(n):
     Fock(ancilla_state_n) | q[0]
 
     # Interferometer
-    BSgate(b_splitters[n][0], -np.pi/4) | (q[0], q[1])
+    BSgate(b_splitters[n][0], b_splitters[n][2]) | (q[0], q[1])
 
     # Squeezing
     Sgate(rs[n]) | q[1]
 
     # Interferometer
-    BSgate(b_splitters[n][1], -np.pi/4) | (q[0], q[1])
+    BSgate(b_splitters[n][1], b_splitters[n][3]) | (q[0], q[1])
 
     # Displacement
     Dgate(alphas[n]) | q[1]

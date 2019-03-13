@@ -1,2 +1,2 @@
-{'n_layers': 6, 'batch_size': 50, 'truncation': 10, 'gamma': 10, 'ancilla_state_n': 0, 'post_select': 1}
-Loss: 1.175300121307373
+{'n_layers': 6, 'batch_size': 50, 'truncation': 10, 'gamma': 10, 'ancilla_state_n': 1, 'post_select': 0}
+Loss: 0.8986434936523438
