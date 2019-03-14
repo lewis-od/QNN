@@ -125,7 +125,7 @@ if should_save:
         os.makedirs(dir_name)
 
     # Save tensorflow model
-    saver = tf.train.Saver(var_list=[b_splitters, rs, alphas])
+    saver = tf.train.Saver(var_list=[b_splitters, rs, alphas, cats])
     saver.save(sess, os.path.join(dir_name, 'model.ckpt'))
 
     # Save hyperparams, losses, and training rates using numpy
