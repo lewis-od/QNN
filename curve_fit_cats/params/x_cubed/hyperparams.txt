@@ -1,0 +1,2 @@
+{'truncation': 10, 'post_select': 0, 'n_layers': 6, 'batch_size': 50, 'gamma': 10}
+Loss: 0.42725735902786255
