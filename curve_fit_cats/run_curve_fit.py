@@ -166,7 +166,7 @@ predicted_output = sess.run(output, feed_dict={ x: sparse_in })
 if should_save:
     # Create a folder with the current date and time
     training_set = train_file.split('.')[0]
-    dir_str = '{}-{}-{}'.format(training_set, ancilla_state_n, post_select)
+    dir_str = '{}-{}'.format(training_set, post_select)
     dir_name = os.path.join('.', 'results', dir_str)
     if os.path.isdir(dir_name):
         now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -174,7 +174,7 @@ if should_save:
     os.makedirs(dir_name)
 
     # Save tensorflow model
-    saver = tf.train.Saver(var_list=[b_splitters, rs, alphas])
+    saver = tf.train.Saver(var_list=[b_splitters, rs, alphas, cats])
     saver.save(sess, os.path.join(dir_name, 'model.ckpt'))
 
     # Save hyperparams, losses, and training rates using numpy
