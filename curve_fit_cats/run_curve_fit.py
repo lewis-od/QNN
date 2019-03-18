@@ -153,11 +153,11 @@ sparse_in = np.linspace(train_in.min(), train_in.max(), batch_size)
 predicted_output = sess.run(output, feed_dict={ x: sparse_in })
 
 if should_save:
-    # Create a folder with the current date and time
+    # Create a folder to save results
     training_set = train_file.split('.')[0]
     dir_str = '{}-{}'.format(training_set, post_select)
     dir_name = os.path.join('.', 'results', dir_str)
-    if os.path.isdir(dir_name):
+    if os.path.isdir(dir_name): # Add timestamp if folder already exists
         now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         dir_name += now_str
     os.makedirs(dir_name)
@@ -176,9 +176,6 @@ if should_save:
         'post_select': post_select
     }
     output_file = os.path.join(dir_name, 'output.npz')
-    if os.path.isfile(output_file):
-        # Check file doesn't already exist
-        output_file = os.path.join(dir_name, 'output {}.npz'.format(now_str))
     # Save hyperparams and loss values
     np.savez(output_file, hyperparams=hyperparams, loss=losses,
         inputs=sparse_in, predictions=predicted_output)
@@ -188,6 +185,7 @@ if should_save:
         print(hyperparams, file=h_file)
         print("Training data: " + train_file, file=h_file)
         print("Optimiser: " + optimiser.get_name(), file=h_file)
+        print("Loss: {}".format(losses[-1]), file=h_file)
 
     print("Saved to: " + dir_name)
 
