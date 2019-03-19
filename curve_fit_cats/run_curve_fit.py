@@ -9,11 +9,11 @@ from strawberryfields.ops import *
 
 n_layers = 6 # Number of layers in neural network
 batch_size = 50 # Batch size used in training
-epochs = 2 # Number of epochs to use
+epochs = 2000 # Number of epochs to use
 truncation = 10 # Cutoff dimension for strawberry fields
 gamma = 10 # Multiplier for trace penalty
 should_save = True # Whether or not to save the results
-post_select = 5 # Photon number for post-selection measurement on ancilla mode
+post_select = 0 # Photon number for post-selection measurement on ancilla mode
 train_file = 'sinc.npz' # File to load training data from
 
 # ----- Tensorflow variables -----
@@ -94,16 +94,30 @@ loss = mse + penalty
 
 # ----- Load and prepare training data -----
 
-with np.load(os.path.join('training', train_file)) as f:
-    # Create Tensorflow Dataset from training data
-    dataset = tf.data.Dataset.from_tensors((f['x'], f['y']))
-    # Group into batches of batch_size
-    batched_data = dataset.repeat().take(batch_size).make_one_shot_iterator()
-    # Used in plotting later
-    x_true = f['x_true']
-    y_true = f['y_true']
-dataset_size = dataset.output_shapes[0].as_list()[0]
-n_batches = dataset_size // batch_size
+def batch_generator(arrays, b_size):
+    """Groups data in the arrays list into batches of size b_size"""
+    starts = [0] * len(arrays)
+    while True:
+        batches = []
+        for i, array in enumerate(arrays):
+            start = starts[i]
+            stop = start + b_size
+            diff = stop - array.shape[0]
+            if diff <= 0:
+                batch = array[start:stop]
+                starts[i] += b_size
+            else:
+                batch = np.concatenate((array[start:], array[:diff]))
+                starts[i] = diff
+            batches.append(batch)
+        yield batches
+
+# Load in training data
+f = np.load(os.path.join('training', train_file))
+inputs = f['x']
+actual_output = f['y']
+batched_data = batch_generator([inputs, actual_output], batch_size)
+n_batches = inputs.size // batch_size
 
 # ----- Train the neural network -----
 
@@ -127,7 +141,7 @@ losses = np.zeros(epochs) # Array to keep track of loss after each epoch
 for step in range(epochs):
     total_loss = 0.0 # Keep track of cumulative loss over all batches
     for b in range(n_batches):
-        batch_in, batch_out = sess.run(batched_data.get_next()) # Get next batch
+        batch_in, batch_out = next(batched_data) # Get next batch
         # Run a training step
         loss_val, _ = sess.run([loss, min_op], feed_dict={
             x: batch_in,
@@ -145,11 +159,8 @@ print("Time Elapsed: {}".format(time_elapsed))
 
 # ----- Save and plot results -----
 
-# Get entire training set from batched Tensorflow Dataset
-train_in, train_out = sess.run(dataset.make_one_shot_iterator().get_next())
-
 # Calculate the predictions of the network
-sparse_in = np.linspace(train_in.min(), train_in.max(), batch_size)
+sparse_in = np.linspace(inputs.min(), inputs.max(), batch_size)
 predicted_output = sess.run(output, feed_dict={ x: sparse_in })
 
 if should_save:
@@ -193,9 +204,9 @@ import matplotlib.pyplot as plt
 
 # Plot predictions, training data, and "true" (non-noisy) curve
 plt.subplot(1, 2, 1)
-plt.plot(x_true, y_true, c='g')
+plt.plot(f['x_true'], f['y_true'], c='g')
 plt.scatter(sparse_in, predicted_output, c='r', marker='x')
-plt.scatter(train_in, train_out, c='b', marker='o')
+plt.scatter(inputs, actual_output, c='b', marker='o')
 
 # Plot loss values
 plt.subplot(1, 2, 2)
