@@ -7,8 +7,8 @@ from strawberryfields.ops import *
 
 # ----- Hyperparameters ------
 n_layers = 6
-batch_size = 100
-epochs = 1000
+batch_size = 25
+epochs = 10000
 truncation = 10
 gamma = 10
 
@@ -66,7 +66,7 @@ with eng:
 
 # ------ Load and prepare training data -----
 
-f = np.load('data/states.npz')
+f = np.load('data/states_tiny.npz')
 in_states = f['states']
 indices = f['labels'].astype(np.int) # List containing 0s or 1s
 
@@ -121,9 +121,7 @@ def batch_generator(arrays, b_size):
 batched_data = batch_generator([in_states, indices], batch_size)
 n_batches = indices.size // batch_size
 
-global_step = tf.Variable(0, trainable=False)
-learning_rate = tf.train.exponential_decay(0.1, global_step, n_batches*10, 0.95)
-optimiser = tf.train.AdamOptimizer(learning_rate=learning_rate)
+optimiser = tf.train.AdadeltaOptimizer(learning_rate=1.0, rho=0.95)
 min_op = optimiser.minimize(loss)
 
 sess = tf.Session()
