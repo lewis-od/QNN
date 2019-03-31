@@ -160,7 +160,7 @@ for step in range(epochs):
         all_equal = reduce(lambda a, b: a and b, pairs_equal, True)
         if all_equal:
             print("Learning has stalled. Exiting...")
-            os.sys.exit(1)
+            break
 
 
 # ----- Save model -----
