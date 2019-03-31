@@ -3,6 +3,7 @@ import numpy as np
 import strawberryfields as sf
 import tensorflow as tf
 from datetime import datetime
+from functools import reduce
 from strawberryfields.ops import *
 
 # ----- Hyperparameters ------
@@ -12,6 +13,7 @@ epochs = 5000
 truncation = 10
 gamma = 10
 train_file = 'states_small.npz'
+stall_threshold = 100 # If loss doesn't change over this number of epochs, exit
 
 # Encode outputs as locations in phase space
 gaussian_x = 0.5
@@ -146,7 +148,20 @@ for step in range(epochs):
     losses[step] = total_loss
     print("[{}]: {}".format(step, total_loss))
     if np.isnan(total_loss):
+        print("Loss has diverged. Exiting...")
         os.sys.exit(1)
+
+    if step > stall_threshold:
+        past_losses = losses[step-stall_threshold:step]
+        # Compare the ith element to the (i+1)th element
+        zipped = zip(past_losses, np.roll(past_losses, 1))
+        pairs_equal = [a[0] == a[1] for a in zipped]
+        # If all pairs of numbers are equal, then the whole array is constant
+        all_equal = reduce(lambda a, b: a and b, pairs_equal, True)
+        if all_equal:
+            print("Learning has stalled. Exiting...")
+            os.sys.exit(1)
+
 
 # ----- Save model -----
 
