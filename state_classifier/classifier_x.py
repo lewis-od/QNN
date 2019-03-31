@@ -7,15 +7,16 @@ from strawberryfields.ops import *
 
 # ----- Hyperparameters ------
 n_layers = 6
-batch_size = 25
-epochs = 10000
+batch_size = 50
+epochs = 5000
 truncation = 10
 gamma = 10
+train_file = 'states_small.npz'
 
 # Encode outputs as locations in phase space
-gaussian_x = 1.0
+gaussian_x = 0.5
 gaussian_p = 0.0
-non_gaussian_x = -1.0
+non_gaussian_x = -0.5
 non_gaussian_p = 0.0
 
 # ----- Setup tensorflow variables -----
@@ -66,7 +67,7 @@ with eng:
 
 # ------ Load and prepare training data -----
 
-f = np.load('data/states_tiny.npz')
+f = np.load(os.path.join('data', train_file))
 in_states = f['states']
 indices = f['labels'].astype(np.int) # List containing 0s or 1s
 
@@ -78,13 +79,13 @@ output_p = state.quad_expectation(0, phi=np.pi/2.0)[0]
 
 # Distance to point in phase space corresponding to input being Gaussian
 dx_g = tf.squared_difference(output_x, gaussian_x)
-dp_g = tf.squared_difference(output_p, gaussian_p)
-dist_g = tf.sqrt(dx_g + dp_g)
+# dp_g = tf.squared_difference(output_p, gaussian_p)
+dist_g = tf.sqrt(dx_g)
 
 # Distance to point in phase space corresponding to input being non-Gaussian
 dx_ng = tf.squared_difference(output_x, non_gaussian_x)
-dp_ng = tf.squared_difference(output_p, non_gaussian_p)
-dist_ng = tf.sqrt(dx_ng + dp_ng)
+# dp_ng = tf.squared_difference(output_p, non_gaussian_p)
+dist_ng = tf.sqrt(dx_ng)
 
 # Smaller distance => Larger probability
 act_g = tf.exp(-dist_g)
@@ -164,7 +165,10 @@ hyperparams = {
     'batch_size': batch_size,
     'epochs': epochs,
     'truncation': truncation,
-    'gamma': gamma
+    'gamma': gamma,
+    'gaussian': (gaussian_x, gaussian_p),
+    'non-gaussian': (non_gaussian_x, non_gaussian_p),
+    'train_file': train_file
 }
 output_file = os.path.join(dir_name, 'output.npz')
 if os.path.isfile(output_file):
@@ -201,5 +205,10 @@ plt.scatter(gaussian_x, gaussian_p, marker='x', color='b')
 plt.scatter(non_gaussian_x, non_gaussian_p, marker='x', color='r')
 plt.xlabel("x")
 plt.ylabel("p")
+
+plt.figure()
+plt.hist(np.concatenate((gaussian_x, non_gaussian_x)), bins=50)
+plt.xlabel("<x>")
+plt.ylabel("Freq.")
 
 plt.show()
