@@ -6,6 +6,8 @@ import strawberryfields as sf
 from datetime import datetime
 from strawberryfields.ops import *
 
+should_save = True
+
 # ----- Parse command-line args -----
 
 if len(os.sys.argv) < 2:
@@ -14,6 +16,10 @@ if len(os.sys.argv) < 2:
 
 res_folder = os.sys.argv[1]
 
+if len(os.sys.argv) > 2:
+    should_save = bool(int(os.sys.argv[2]))
+    qualifier = "Will" if should_save else "Won't"
+    print(qualifier + " save plot")
 
 # ----- Load in hyperparameters -----
 
@@ -68,8 +74,9 @@ elif 'x_cubed' in train_file:
 
 plt.ylabel(y_str, fontsize=18)
 
-save_path = os.path.join(res_folder, 'plot.eps')
-plt.savefig(save_path, bbox_inches='tight')
-print("Saved plot to: " + save_path)
+if should_save:
+    save_path = os.path.join(res_folder, 'plot.eps')
+    plt.savefig(save_path, bbox_inches='tight')
+    print("Saved plot to: " + save_path)
 
 plt.show()
