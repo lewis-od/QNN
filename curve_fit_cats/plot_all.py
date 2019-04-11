@@ -43,12 +43,12 @@ for k in range(3):
         c='r', marker='x')
     input_scatter = plt.scatter(training_in, training_out, c='b', marker='o')
 
-    plt.xlabel("Input", fontsize=18)
+    plt.xlabel("Input", fontsize=26)
     if k == 0:
-        plt.ylabel("Output", fontsize=18)
+        plt.ylabel("Output", fontsize=26)
 
 if should_save:
-    save_path = os.path.join('results', "results-{}.eps".format(n_post))
+    save_path = os.path.join('results', "cat-{}.eps".format(n_post))
     plt.savefig(save_path, bbox_inches='tight')
     print("Saved plot to: " + save_path)
 
