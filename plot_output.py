@@ -1,10 +1,5 @@
 import os
-import ast
 import numpy as np
-import tensorflow as tf
-import strawberryfields as sf
-from datetime import datetime
-from strawberryfields.ops import *
 
 should_save = True
 
