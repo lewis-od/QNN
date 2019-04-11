@@ -2,15 +2,18 @@ import os
 import numpy as np
 import matplotlib.pyplot as plt
 
-n_ancilla = 0
-n_post = 1
+n_ancilla = 1
+n_post = 0
 should_save = True
 
 data_sets = ['sin', 'sinc', 'x_cubed']
 
 plt.rc('text', usetex=True)
 plt.rc('font', family='serif')
-plt.figure(figsize=(8*3, 5))
+fig, axs = plt.subplots(1, 3, figsize=(8*3, 5))
+plt.suptitle(r'$(n_{\mathrm{in}}, n_{\mathrm{post}}) = ('
+    + str(n_ancilla) + ', ' + str(n_post) + r')$',
+    fontsize=32)
 
 for k in range(3):
     res_folder = os.path.join(os.curdir, 'results',
@@ -37,20 +40,18 @@ for k in range(3):
         predictions_in = f['inputs']
         predictions_out = f['predictions']
 
-    plt.subplot(1, 3, k+1)
-
     # Plot predictions, training data, and "true" (non-noisy) curve
-    true_curve, = plt.plot(true_in, true_out, c='g')
-    predicted_scatter = plt.scatter(predictions_in, predictions_out,
+    true_curve, = axs[k].plot(true_in, true_out, c='g')
+    predicted_scatter = axs[k].scatter(predictions_in, predictions_out,
         c='r', marker='x')
-    input_scatter = plt.scatter(training_in, training_out, c='b', marker='o')
+    input_scatter = axs[k].scatter(training_in, training_out, c='b', marker='o')
 
-    plt.xlabel("Input", fontsize=18)
+    axs[k].set_xlabel("Input", fontsize=26)
     if k == 0:
-        plt.ylabel("Output", fontsize=18)
+        axs[k].set_ylabel("Output", fontsize=26)
 
 if should_save:
-    save_path = os.path.join('results', "results-{}-{}.eps".format(n_ancilla, n_post))
+    save_path = os.path.join('results', "fock-{}-{}.eps".format(n_ancilla, n_post))
     plt.savefig(save_path, bbox_inches='tight')
     print("Saved plot to: " + save_path)
 
