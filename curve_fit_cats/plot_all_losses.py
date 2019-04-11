@@ -33,6 +33,7 @@ for k in range(3):
         plt.ylabel("Loss", fontsize=16)
 
 plt.legend([r'$\sin(x)$', r'$\mathrm{sinc}(x)$', r'$x^3$'], fontsize=16)
+plt.xlim([0, 2000])
 
 if should_save:
     save_path = os.path.join('results', "losses-{}.eps".format(n_post))
