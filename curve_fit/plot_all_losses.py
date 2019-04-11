@@ -31,7 +31,7 @@ for k in range(3):
     # Plot losses
     plt.plot(loss)
 
-    plt.xlabel("Step", fontsize=18)
+    plt.xlabel("Step", fontsize=16)
     if k == 0:
         plt.ylabel("Loss", fontsize=16)
 
