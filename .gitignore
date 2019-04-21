@@ -1,7 +1,8 @@
 .DS_Store
 *.pyc
+*.eps
+*.png
 save/*
 curve_fit/save
-curve_fit/results/*/
-curve_fit_cats/results/*/
+curve_fit/results/less_params
 state_classifier/save

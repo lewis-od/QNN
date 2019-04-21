@@ -13,8 +13,8 @@ epochs = 2000 # Number of epochs to use
 truncation = 10 # Cutoff dimension for strawberry fields
 gamma = 10 # Multiplier for trace penalty
 should_save = True # Whether or not to save the results
-ancilla_state_n = 0 # Photon number of ancilla Fock state
-post_select = 1 # Photon number for post-selection measurement on ancilla mode
+ancilla_state_n = 2 # Photon number of ancilla Fock state
+post_select = 0 # Photon number for post-selection measurement on ancilla mode
 train_file = 'x_cubed.npz' # File to load training data from
 
 # ----- Tensorflow variables -----

@@ -14,7 +14,7 @@ truncation = 10 # Cutoff dimension for strawberry fields
 gamma = 10 # Multiplier for trace penalty
 should_save = True # Whether or not to save the results
 post_select = 0 # Photon number for post-selection measurement on ancilla mode
-train_file = 'sinc.npz' # File to load training data from
+train_file = 'x_cubed.npz' # File to load training data from
 
 # ----- Tensorflow variables -----
 

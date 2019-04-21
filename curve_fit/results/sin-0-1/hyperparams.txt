@@ -1,0 +1,3 @@
+{'n_layers': 6, 'batch_size': 50, 'epochs': 2000, 'truncation': 10, 'gamma': 10, 'ancilla_state_n': 0, 'post_select': 1}
+Training data: sin.npz
+Optimiser: Adadelta
