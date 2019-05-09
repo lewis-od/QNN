@@ -24,7 +24,7 @@ Within each folder:
 - `training/*.npz` - Training data in numpy format
 - `params/` - Values of Tensorflow parameters that are loaded prior to training the QNN
 - `results/` - Results after training the QNN. Subdirectory names are formatted as `{training set}-{n_in}-{n_post}/` for the
-Fock state ancilla, and `{training set}-n_post/` for the cat state ancilla. Within these directories:
+Fock state ancilla, and `{training set}-{n_post}/` for the cat state ancilla. Within these directories:
   - The `checkpoint` and `model.*` files are the final parameter values, stored in Tensorflow format
   - `output.npz` contains a set of values that have been input to the QNN, and their corresponding outputs, as well as
   an array containing the value of the loss function at each training epoch
